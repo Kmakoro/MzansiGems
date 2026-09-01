@@ -1,0 +1,322 @@
+openapi: 3.1.0
+info:
+  title: Mzansi Gem API
+  version: 1.0.0
+  description: Shared REST API for the PHP website and Android application.
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Docker development server
+  - url: http://10.0.2.2:8080/api/v1
+    description: Android emulator to host computer
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      security: []
+      summary: Health check
+      responses:
+        '200': { description: Healthy }
+  /auth/register:
+    post:
+      security: []
+      summary: Register a user and issue an API token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201': { description: Created }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /auth/login:
+    post:
+      security: []
+      summary: Authenticate and issue an API token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200': { description: Authenticated }
+        '401': { description: Invalid credentials }
+  /auth/forgot-password:
+    post:
+      security: []
+      summary: Email a one-hour password reset link when the account exists
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200': { description: Generic reset response }
+  /auth/logout:
+    post:
+      summary: Revoke current token
+      responses:
+        '200': { description: Logged out }
+  /auth/me:
+    get:
+      summary: Current user
+      responses:
+        '200': { description: User profile }
+  /categories:
+    get:
+      security: []
+      summary: Filter values
+      responses:
+        '200': { description: Categories }
+  /gems:
+    get:
+      security: []
+      summary: Browse approved gems
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: city, schema: { type: string } }
+        - { in: query, name: vibe, schema: { type: string } }
+        - { in: query, name: budget, schema: { type: string } }
+        - { in: query, name: activity, schema: { type: string } }
+        - { in: query, name: sort, schema: { type: string, enum: [recommended, rating, newest, popular] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: Paginated gems }
+    post:
+      summary: Submit a Mzansi Gem
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [title, description, location, city, vibes, budget_level, activity_type, rating]
+              properties:
+                title: { type: string }
+                description: { type: string }
+                location: { type: string }
+                city: { type: string }
+                vibes: { type: string, example: Chill,Romantic }
+                budget_level: { type: string, enum: [Free, Budget, Mid-range, Premium] }
+                activity_type: { type: string, enum: [Food, Fitness, Study, Nature, Nightlife, Culture] }
+                operating_hours: { type: string }
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                images:
+                  type: array
+                  maxItems: 3
+                  items: { type: string, format: binary }
+      responses:
+        '201': { description: Submitted }
+  /gems/random:
+    get:
+      security: []
+      summary: Random approved gem
+      responses:
+        '200': { description: Random gem }
+  /gems/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer } }
+    get:
+      security: []
+      summary: Gem detail and reviews
+      responses:
+        '200': { description: Gem detail }
+    patch:
+      summary: Edit an owned gem
+      responses:
+        '200': { description: Updated }
+    delete:
+      summary: Delete an owned gem
+      responses:
+        '200': { description: Deleted }
+  /gems/{id}/like:
+    post:
+      summary: Toggle gem like
+      parameters: [{ in: path, name: id, required: true, schema: { type: integer } }]
+      responses: { '200': { description: Toggled } }
+  /gems/{id}/save:
+    post:
+      summary: Toggle saved gem
+      parameters: [{ in: path, name: id, required: true, schema: { type: integer } }]
+      responses: { '200': { description: Toggled } }
+  /gems/{id}/note:
+    patch:
+      summary: Save personal note
+      parameters: [{ in: path, name: id, required: true, schema: { type: integer } }]
+      responses: { '200': { description: Note saved } }
+  /gems/{id}/reviews:
+    post:
+      summary: Submit review
+      parameters: [{ in: path, name: id, required: true, schema: { type: integer } }]
+      responses: { '201': { description: Review submitted } }
+  /reviews/{id}:
+    patch:
+      summary: Edit owned review
+      parameters: [{ in: path, name: id, required: true, schema: { type: integer } }]
+      responses: { '200': { description: Updated } }
+    delete:
+      summary: Delete owned review
+      parameters: [{ in: path, name: id, required: true, schema: { type: integer } }]
+      responses: { '200': { description: Deleted } }
+  /reviews/{id}/like:
+    post:
+      summary: Toggle review like
+      parameters: [{ in: path, name: id, required: true, schema: { type: integer } }]
+      responses: { '200': { description: Toggled } }
+  /saved:
+    get:
+      summary: Current user's saved gems
+      responses: { '200': { description: Saved gems } }
+  /profile:
+    get:
+      summary: Profile and statistics
+      responses: { '200': { description: Profile } }
+    patch:
+      summary: Update profile
+      responses: { '200': { description: Updated } }
+    delete:
+      summary: Delete account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string, format: password }
+      responses: { '200': { description: Deleted } }
+  /profile/settings:
+    patch:
+      summary: Update notification and privacy preferences
+      responses: { '200': { description: Updated } }
+  /profile/password:
+    patch:
+      summary: Change password
+      responses: { '200': { description: Updated } }
+  /profile/gems:
+    get:
+      summary: User's submitted gems
+      responses: { '200': { description: Gems } }
+  /profile/reviews:
+    get:
+      summary: User's reviews
+      responses: { '200': { description: Reviews } }
+  /reports:
+    post:
+      summary: Report a gem or review
+      responses: { '201': { description: Reported } }
+  /admin/dashboard:
+    get:
+      summary: Admin metrics
+      responses: { '200': { description: Dashboard } }
+  /admin/users:
+    get:
+      summary: Admin user list
+      responses: { '200': { description: Users } }
+  /admin/moderation:
+    get:
+      summary: Pending gems, reviews, and reports
+      responses: { '200': { description: Moderation queues } }
+  /admin/analytics:
+    get:
+      summary: Platform analytics
+      responses: { '200': { description: Analytics } }
+  /admin/settings:
+    get:
+      summary: Platform settings
+      responses: { '200': { description: Settings } }
+    patch:
+      summary: Update platform settings
+      responses: { '200': { description: Updated } }
+  /admin/users/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer } }
+    patch:
+      summary: Update a user's role and status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role, status]
+              properties:
+                role: { type: string, enum: [user, admin] }
+                status: { type: string, enum: [active, suspended] }
+      responses: { '200': { description: User updated } }
+  /admin/gems/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer } }
+    patch:
+      summary: Approve, reject, or return a gem to pending
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ModerationRequest' }
+      responses: { '200': { description: Gem moderated } }
+  /admin/reviews/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer } }
+    patch:
+      summary: Approve, reject, or return a review to pending
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ModerationRequest' }
+      responses: { '200': { description: Review moderated } }
+  /admin/reports/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer } }
+    patch:
+      summary: Resolve, dismiss, or reopen a report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [resolved, dismissed, pending] }
+                resolution_note: { type: string, maxLength: 400 }
+      responses: { '200': { description: Report updated } }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque-token
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+        device_name: { type: string }
+    RegisterRequest:
+      type: object
+      required: [full_name, email, city, password, confirm_password]
+      properties:
+        full_name: { type: string }
+        email: { type: string, format: email }
+        city: { type: string }
+        password: { type: string, format: password, minLength: 8 }
+        confirm_password: { type: string, format: password }
+        device_name: { type: string }
+    ModerationRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [approved, rejected, pending] }
+        rejection_reason: { type: string, maxLength: 400 }
+  responses:
+    ValidationError:
+      description: Validation failed

@@ -1,0 +1,12 @@
+<?php
+declare(strict_types=1);
+require __DIR__ . '/includes/bootstrap.php';
+$token=(string)($_GET['token'] ?? $_POST['token'] ?? ''); $valid=false; $reset=null; $errors=[];
+if ($token) { $stmt=db()->prepare('SELECT * FROM password_resets WHERE token_hash=? AND expires_at>NOW() AND used_at IS NULL ORDER BY id DESC LIMIT 1'); $stmt->execute([hash('sha256',$token)]); $reset=$stmt->fetch(); $valid=(bool)$reset; }
+if ($_SERVER['REQUEST_METHOD']==='POST') { verify_csrf(); $password=(string)($_POST['password']??''); $confirm=(string)($_POST['confirm_password']??''); if (!$valid) $errors[]='This reset link is invalid or expired.'; if(strlen($password)<8)$errors[]='Password must contain at least 8 characters.'; if($password!==$confirm)$errors[]='Passwords do not match.'; if(!$errors){db()->beginTransaction();$stmt=db()->prepare('UPDATE users SET password_hash=? WHERE id=?');$stmt->execute([password_hash($password,PASSWORD_DEFAULT),(int)$reset['user_id']]);$stmt=db()->prepare('UPDATE password_resets SET used_at=NOW() WHERE id=?');$stmt->execute([(int)$reset['id']]);$stmt=db()->prepare('DELETE FROM remember_tokens WHERE user_id=?');$stmt->execute([(int)$reset['user_id']]);db()->commit();flash('success','Password updated. You can now sign in.');redirect('login.php');}}
+$pageTitle='Choose a new password';$bodyClass='auth-body';require __DIR__.'/includes/header.php';
+?>
+<div class="auth-shell"><div class="auth-card"><div class="auth-icon">✦</div><h1>Choose a new password</h1><p class="muted">Use at least eight characters.</p>
+<?php if($errors):?><div class="toast toast-danger" style="position:static;margin-bottom:14px"><span><?=e(implode(' ',$errors))?></span></div><?php endif;?>
+<?php if($valid):?><form method="post"><?=csrf_field()?><input type="hidden" name="token" value="<?=e($token)?>"><div class="form-group"><label>New Password</label><input class="form-control" type="password" name="password" required minlength="8"></div><div class="form-group"><label>Confirm Password</label><input class="form-control" type="password" name="confirm_password" required></div><button class="btn btn-primary btn-block">Update Password</button></form><?php else:?><div class="empty-state"><p>This reset link is invalid or expired.</p><a class="btn btn-primary" href="<?=url('forgot-password.php')?>">Request another link</a></div><?php endif;?></div></div>
+<?php require __DIR__.'/includes/footer.php'; ?>

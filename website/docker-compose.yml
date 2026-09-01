@@ -1,0 +1,43 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8080:80"
+    environment:
+      APP_URL: http://localhost:8080
+      APP_ENV: development
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: hidden_gems
+      DB_USER: hidden_gems
+      DB_PASS: hidden_gems_password
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      API_ALLOWED_ORIGIN: ${API_ALLOWED_ORIGIN:-*}
+    volumes:
+      - ./:/var/www/html
+      - uploads:/var/www/html/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: hidden_gems
+      MYSQL_USER: hidden_gems
+      MYSQL_PASSWORD: hidden_gems_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/install.sql:/docker-entrypoint-initdb.d/01-install.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+volumes:
+  mysql_data:
+  uploads:
