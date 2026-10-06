@@ -44,6 +44,14 @@ function api_auth_register(): never
         );
     }
 
+    if ($requiresVerification) {
+        api_response(
+            ['token' => '', 'token_type' => 'Bearer', 'user' => api_public_user($user)],
+            'Account created. Please verify your email address before signing in.',
+            201
+        );
+    }
+
     $token = api_issue_token($userId, (string)($input['device_name'] ?? 'Android app'));
     api_response(['token' => $token, 'token_type' => 'Bearer', 'user' => api_public_user($user)], 'Account created successfully.', 201);
 }
