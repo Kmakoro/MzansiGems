@@ -315,3 +315,48 @@ INSERT INTO activity_log (user_id,activity_type,description,created_at) VALUES
 (4,'review_liked','Task 2 simulated review like.','2026-05-12 12:15:00'),
 (1,'settings_updated','Task 2 simulated settings update.','2026-05-12 12:20:00'),
 (2,'mobile_login','Task 2 simulated mobile sign-in.','2026-05-12 12:25:00');
+
+
+-- TASK2_SEED_SECURITY_TABLES
+-- These are expired/used simulated records only; they are not valid authentication secrets.
+INSERT INTO email_verification_tokens (user_id,token_hash,expires_at) VALUES
+(1,SHA2('task2-verify-1',256),'2026-01-02 00:00:00'),
+(2,SHA2('task2-verify-2',256),'2026-01-02 00:00:00'),
+(3,SHA2('task2-verify-3',256),'2026-01-02 00:00:00'),
+(4,SHA2('task2-verify-4',256),'2026-01-02 00:00:00'),
+(5,SHA2('task2-verify-5',256),'2026-01-02 00:00:00'),
+(6,SHA2('task2-verify-6',256),'2026-01-02 00:00:00'),
+(7,SHA2('task2-verify-7',256),'2026-01-02 00:00:00'),
+(8,SHA2('task2-verify-8',256),'2026-01-02 00:00:00'),
+(9,SHA2('task2-verify-9',256),'2026-01-02 00:00:00'),
+(10,SHA2('task2-verify-10',256),'2026-01-02 00:00:00');
+
+INSERT INTO remember_tokens (user_id,selector,token_hash,expires_at) VALUES
+(1,'0000000000000001',SHA2('task2-remember-1',256),'2026-01-02 00:00:00'),
+(2,'0000000000000002',SHA2('task2-remember-2',256),'2026-01-02 00:00:00'),
+(3,'0000000000000003',SHA2('task2-remember-3',256),'2026-01-02 00:00:00'),
+(4,'0000000000000004',SHA2('task2-remember-4',256),'2026-01-02 00:00:00'),
+(5,'0000000000000005',SHA2('task2-remember-5',256),'2026-01-02 00:00:00'),
+(6,'0000000000000006',SHA2('task2-remember-6',256),'2026-01-02 00:00:00'),
+(7,'0000000000000007',SHA2('task2-remember-7',256),'2026-01-02 00:00:00'),
+(8,'0000000000000008',SHA2('task2-remember-8',256),'2026-01-02 00:00:00'),
+(9,'0000000000000009',SHA2('task2-remember-9',256),'2026-01-02 00:00:00'),
+(10,'0000000000000010',SHA2('task2-remember-10',256),'2026-01-02 00:00:00');
+
+INSERT INTO api_tokens (user_id,token_hash,name,last_used_at,expires_at)
+SELECT id,SHA2(CONCAT('task2-api-',id),256),'Expired Task 2 simulation','2026-01-01 00:00:00','2026-01-02 00:00:00'
+FROM users ORDER BY id LIMIT 10;
+
+INSERT INTO password_resets (user_id,token_hash,expires_at,used_at)
+SELECT id,SHA2(CONCAT('task2-reset-',id),256),'2026-01-02 00:00:00','2026-01-01 12:00:00'
+FROM users ORDER BY id LIMIT 10;
+
+INSERT INTO reports (reporter_id,gem_id,violation_type,details,status,created_at) VALUES
+(1,2,'Incorrect information','Please confirm the opening hours.','resolved','2026-05-12 10:00:00'),
+(2,3,'Duplicate content','This may duplicate another listing.','dismissed','2026-05-12 10:10:00'),
+(3,4,'Incorrect location','Please confirm the map location.','resolved','2026-05-12 10:20:00'),
+(4,5,'Outdated information','The activity details may have changed.','pending','2026-05-12 10:30:00'),
+(1,6,'Image issue','Please verify the cover image.','pending','2026-05-12 10:40:00'),
+(2,1,'Accessibility information','Accessibility details are missing.','resolved','2026-05-12 10:50:00'),
+(3,7,'Opening hours','Please confirm closing time.','pending','2026-05-12 11:00:00'),
+(4,3,'Description issue','The description could be clearer.','dismissed','2026-05-12 11:10:00');
