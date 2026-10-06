@@ -32,6 +32,18 @@ function api_auth_register(): never
     $stmt = db()->prepare('SELECT id,full_name,email,city,bio,role,status,level,points,password_hash,email_verified_at,notify_new_gems,notify_comments,notify_likes_saves,personalized_recommendations,show_saved_gems,show_activity_status,created_at,updated_at FROM users WHERE id = ?');
     $stmt->execute([$userId]);
     $user = $stmt->fetch();
+
+    if ($requiresVerification) {
+        $verificationToken = create_email_verification_token($userId);
+        $webVerifyLink = api_request_origin() . '/verify-email.php?token=' . urlencode($verificationToken);
+        $appVerifyLink = 'mzansigem://auth/verify-email?token=' . urlencode($verificationToken);
+        send_app_email(
+            $email,
+            'Verify your Mzansi Gem email',
+            "Welcome to Mzansi Gem!\n\nWebsite:\n{$webVerifyLink}\n\nAndroid app:\n{$appVerifyLink}\n\nThese links expire in 24 hours."
+        );
+    }
+
     $token = api_issue_token($userId, (string)($input['device_name'] ?? 'Android app'));
     api_response(['token' => $token, 'token_type' => 'Bearer', 'user' => api_public_user($user)], 'Account created successfully.', 201);
 }
