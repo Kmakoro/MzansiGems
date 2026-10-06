@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -7,6 +9,17 @@ plugins {
 val apiBaseUrl = providers.gradleProperty("API_BASE_URL")
     .orElse("http://10.0.2.2/website/api/v1/")
     .get()
+
+val firebaseProperties = Properties().apply {
+    val file = rootProject.file("firebase.properties")
+    if (file.exists()) file.inputStream().use(::load)
+}
+
+fun configValue(name: String): String =
+    providers.gradleProperty(name).orNull ?: firebaseProperties.getProperty(name, "")
+
+fun buildConfigString(value: String): String =
+    "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
 android {
     namespace = "za.co.hiddengems.app"
@@ -21,6 +34,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+        buildConfigField("String", "FIREBASE_API_KEY", buildConfigString(configValue("FIREBASE_API_KEY")))
+        buildConfigField("String", "FIREBASE_APP_ID", buildConfigString(configValue("FIREBASE_APP_ID")))
+        buildConfigField("String", "FIREBASE_PROJECT_ID", buildConfigString(configValue("FIREBASE_PROJECT_ID")))
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", buildConfigString(configValue("GOOGLE_WEB_CLIENT_ID")))
     }
 
     buildTypes {
@@ -71,6 +88,13 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("io.coil-kt.coil3:coil-compose:3.4.0")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.4.0")
+
+    implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("androidx.credentials:credentials:1.6.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.2.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
