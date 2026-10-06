@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Debug builds may connect to a developer computer over local Wi-Fi HTTP.
+         Release builds use the secure main network policy. -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
