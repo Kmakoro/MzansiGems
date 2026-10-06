@@ -188,7 +188,7 @@ APK output:
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-The first wrapper run downloads Gradle 9.4.1. JDK 17 and Android SDK 37 are required.
+The first wrapper run downloads Gradle 9.4.1. JDK 21 and Android SDK 37 are required.
 
 ## Production checklist
 
