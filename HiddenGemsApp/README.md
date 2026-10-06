@@ -85,3 +85,66 @@ The first wrapper run downloads Gradle 9.4.1. JDK 17 and Android SDK 37 are requ
 ## Feature coverage
 
 The Android project includes discovery, authentication, password-reset requests, gem and review contribution flows, image upload, saved notes, profile settings, reporting, and mobile administrator screens for moderation, users, analytics and platform settings. The website remains the target of password-reset email links so users can securely complete the reset without placing reset tokens inside the app.
+
+## Task 2: Firebase Google SSO
+
+The app uses Firebase Authentication only for Google sign-in. After Firebase authenticates the Google account, the Android app sends the Firebase ID token to `POST /api/v1/auth/firebase`. The PHP API verifies the token, links or creates the matching MySQL user, and returns the same bearer token used by normal login. Website and Android therefore share the same account/data.
+
+Copy:
+
+```text
+firebase.properties.example -> firebase.properties
+```
+
+Fill in:
+
+```text
+FIREBASE_API_KEY=...
+FIREBASE_APP_ID=...
+FIREBASE_PROJECT_ID=...
+GOOGLE_WEB_CLIENT_ID=...
+```
+
+Also set this on the PHP server:
+
+```text
+FIREBASE_WEB_API_KEY=...
+```
+
+In Firebase Console, register package `za.co.hiddengems.app`, add the debug/release SHA-1 values, and enable Google Authentication.
+
+## Run on a real Android phone
+
+The final Task 2 build should be tested on a real phone.
+
+1. Put phone and computer on the same Wi-Fi.
+2. Start XAMPP/Apache or Docker.
+3. Find the computer LAN IP.
+4. Use that IP for `API_BASE_URL`.
+
+XAMPP:
+
+```bash
+./gradlew assembleDebug -PAPI_BASE_URL=http://192.168.1.20/website/api/v1/
+```
+
+Docker:
+
+```bash
+./gradlew assembleDebug -PAPI_BASE_URL=http://192.168.1.20:8080/api/v1/
+```
+
+`10.0.2.2` is for the emulator only.
+
+## Tests and CI
+
+Run locally:
+
+```bash
+./gradlew testDebugUnitTest assembleDebug
+```
+
+GitHub Actions runs the same unit tests and APK build automatically using `.github/workflows/android-ci.yml`.
+
+See `USER_GUIDE.md` for user instructions.
+
