@@ -135,13 +135,13 @@ Native Android client for the Mzansi Gem PHP/MySQL platform.
 1. Run the PHP website/API at `http://localhost:8080`.
 2. Open this folder in Android Studio.
 3. Sync Gradle.
-4. Use an emulator with Android 6.0/API 23 or later.
+4. For development you may use an emulator, but for the final Task 2 verification connect a physical Android phone (Android 6.0/API 23 or later).
 5. Run `app`.
 
 The default emulator API URL is defined in `app/build.gradle.kts` as:
 
 ```text
-http://10.0.2.2:8080/api/v1/
+http://10.0.2.2/website/api/v1/
 ```
 
 For a physical device, use your development computer's LAN IP and ensure the device can reach port 8080:
@@ -252,3 +252,11 @@ Do not use `10.0.2.2` on a physical phone; that address is only for the Android 
 
 The Android Settings screen now contains **Help & Support**. A full guide is in `HiddenGemsApp/USER_GUIDE.md`, and rubric mapping is in `TASK2_COMPLIANCE.md`.
 
+
+## Task 2 evidence documents
+
+- `TASK2_COMPLIANCE.md` - rubric-to-implementation mapping
+- `HiddenGemsApp/USER_GUIDE.md` - end-user guide
+- `docs/TEST_PLAN.md` - physical-device/integration test plan
+- `docs/FINAL_SUBMISSION_CHECKLIST.md` - final submission and video evidence checklist
+- `docs/AZURE_DEVOPS_EVIDENCE.md` - checklist for genuine Azure DevOps evidence
