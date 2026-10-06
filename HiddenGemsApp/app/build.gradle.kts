@@ -16,7 +16,9 @@ val firebaseProperties = Properties().apply {
 }
 
 fun configValue(name: String): String =
-    providers.gradleProperty(name).orNull ?: firebaseProperties.getProperty(name, "")
+    providers.gradleProperty(name).orNull
+        ?: System.getenv(name)
+        ?: firebaseProperties.getProperty(name, "")
 
 fun buildConfigString(value: String): String =
     "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
