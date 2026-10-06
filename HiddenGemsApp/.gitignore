@@ -1,6 +1,7 @@
 *.iml
 .gradle/
 local.properties
+firebase.properties
 .idea/
 build/
 app/build/
