@@ -24,6 +24,9 @@ interface HiddenGemsApi {
     @POST("auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<ApiEnvelope<AuthPayload>>
 
+    @POST("auth/firebase")
+    suspend fun firebaseLogin(@Body request: FirebaseLoginRequest): Response<ApiEnvelope<AuthPayload>>
+
     @POST("auth/forgot-password")
     suspend fun forgotPassword(@Body request: Map<String, String>): Response<ApiEnvelope<Unit>>
 
