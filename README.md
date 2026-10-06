@@ -202,3 +202,53 @@ The first wrapper run downloads Gradle 9.4.1. JDK 17 and Android SDK 37 are requ
 ## Feature coverage
 
 The Android project includes discovery, authentication, password-reset requests, gem and review contribution flows, image upload, saved notes, profile settings, reporting, and mobile administrator screens for moderation, users, analytics and platform settings. The website remains the target of password-reset email links so users can securely complete the reset without placing reset tokens inside the app.
+
+## Task 2 Android additions
+
+### Firebase Google SSO
+
+The Android app uses Firebase Authentication for Google identity only. Application users, gems, reviews, settings and all other data still flow through the PHP REST API into the same MySQL database used by the website. This keeps mobile and website changes synchronized.
+
+Setup:
+1. Create/open a Firebase project.
+2. Add Android package `za.co.hiddengems.app`.
+3. Add the Android SHA-1 fingerprint.
+4. Enable **Authentication > Sign-in method > Google**.
+5. Copy `HiddenGemsApp/firebase.properties.example` to `HiddenGemsApp/firebase.properties`.
+6. Add `FIREBASE_API_KEY`, `FIREBASE_APP_ID`, `FIREBASE_PROJECT_ID`, and `GOOGLE_WEB_CLIENT_ID`.
+7. Set `FIREBASE_WEB_API_KEY` on the PHP server.
+8. For an existing database, run `website/database/migrate_task2_compliance.sql` and then `website/database/task2_seed_additions.sql` once.
+
+### Run on a real Android phone
+
+For Task 2, test the final app on a physical Android device.
+
+1. Put the phone and development computer on the same Wi-Fi.
+2. Find the computer LAN IP, for example `192.168.1.20`.
+3. Make sure Apache/XAMPP or Docker is reachable from the phone.
+4. Build with the real LAN API address.
+
+XAMPP example:
+
+```bash
+cd HiddenGemsApp
+./gradlew assembleDebug -PAPI_BASE_URL=http://192.168.1.20/website/api/v1/
+```
+
+Docker example:
+
+```bash
+cd HiddenGemsApp
+./gradlew assembleDebug -PAPI_BASE_URL=http://192.168.1.20:8080/api/v1/
+```
+
+Do not use `10.0.2.2` on a physical phone; that address is only for the Android emulator.
+
+### Automated testing and APK build
+
+`.github/workflows/android-ci.yml` runs `testDebugUnitTest`, builds the debug APK, and uploads the APK as a GitHub Actions artifact.
+
+### User support
+
+The Android Settings screen now contains **Help & Support**. A full guide is in `HiddenGemsApp/USER_GUIDE.md`, and rubric mapping is in `TASK2_COMPLIANCE.md`.
+
