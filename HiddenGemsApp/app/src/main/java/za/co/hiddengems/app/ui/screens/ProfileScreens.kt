@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Map
@@ -290,6 +291,29 @@ fun SettingsScreen(
             item { SettingsToggle("Show saved gems on profile", "Let others see your saved list", preferences.showSavedGems) { preferences = preferences.copy(showSavedGems = it) } }
             item { SettingsToggle("Show activity status", "Display when you are active", preferences.showActivityStatus) { preferences = preferences.copy(showActivityStatus = it) } }
             item { Button(onClick = { onSavePreferences(preferences) }, modifier = Modifier.fillMaxWidth()) { Text("Save preferences") } }
+
+            item { SettingsHeading(Icons.Default.HelpOutline, "Help & Support") }
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text("Quick help", fontWeight = FontWeight.Bold)
+                        Text("Discover: search and filter gems by city, vibe, budget or activity.")
+                        Text("Share: sign in and use the Share tab to submit a place.")
+                        Text("Saved: save gems and keep private notes for later.")
+                        Text("Google sign-in: use Continue with Google on the sign-in screen.")
+                        Text("Sync: the Android app and website use the same API and MySQL database.")
+                        Text("Real phone: when developing locally, use your computer LAN IP instead of 10.0.2.2.")
+                        Text("More help: see USER_GUIDE.md in the Android project.")
+                    }
+                }
+            }
+
             item { SettingsHeading(Icons.Default.Lock, "Security") }
             item { OutlinedButton(onClick = { showPasswordDialog = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Lock, null); Spacer(Modifier.width(6.dp)); Text("Change password") } }
             item { OutlinedButton(onClick = onLogout, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Logout, null); Spacer(Modifier.width(6.dp)); Text("Log out") } }
