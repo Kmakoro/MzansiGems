@@ -1,0 +1,6 @@
+# Copy this file to firebase.properties and fill in your Firebase project values.
+# Do not commit firebase.properties.
+FIREBASE_API_KEY=
+FIREBASE_APP_ID=
+FIREBASE_PROJECT_ID=
+GOOGLE_WEB_CLIENT_ID=

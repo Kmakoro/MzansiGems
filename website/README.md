@@ -114,3 +114,31 @@ uploads/                User-uploaded gem images
 ## Notes
 
 The design follows the warm orange/peach gradient, cream background, rounded cards, filter panels, bottom mobile navigation, profile dashboard, and admin sidebar shown in the supplied prototype. External seed photos and Chart.js use internet-hosted resources; uploaded user photos are stored locally.
+
+## Android Firebase authentication bridge
+
+The Android client uses Firebase Authentication for Google SSO, but it does **not** use Firestore as the application database. The Android app sends its Firebase ID token to:
+
+```text
+POST /api/v1/auth/firebase
+```
+
+The PHP API verifies the Firebase token, links the Firebase UID to the existing `users` row, and issues the normal Mzansi Gem API bearer token. The website and Android app therefore continue to share the same MySQL users, gems, reviews, saves, settings and moderation data.
+
+Set this backend environment variable to the Firebase Web API key:
+
+```text
+FIREBASE_WEB_API_KEY=...
+```
+
+For Docker, `docker-compose.yml` forwards the value automatically from your shell or `.env`.
+
+For an existing database, run these once:
+
+```text
+database/migrate_task2_compliance.sql
+database/task2_seed_additions.sql
+```
+
+Fresh databases created from `database/install.sql` already include the Firebase UID column and Task 2 seed records.
+

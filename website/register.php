@@ -37,16 +37,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($requiresVerification) {
                 $token = create_email_verification_token($userId);
                 $verificationLink = url('verify-email.php?token=' . urlencode($token));
+                $appVerificationLink = 'mzansigem://auth/verify-email?token=' . urlencode($token);
                 $_SESSION['verification_email'] = $email;
                 if (APP_ENV === 'development') {
                     $_SESSION['dev_verification_link'] = $verificationLink;
                 }
                 send_app_email($email, 'Verify your Mzansi Gem email', "Welcome to Mzansi Gem!
 
-Verify your email address using this link:
+Verify your email address using either link:
+
+Website:
 {$verificationLink}
 
-This link expires in 24 hours.");
+Android app:
+{$appVerificationLink}
+
+These links expire in 24 hours.");
                 flash('success', 'Your account was created. Verify your email address before signing in.');
                 redirect('verification-sent.php');
             }

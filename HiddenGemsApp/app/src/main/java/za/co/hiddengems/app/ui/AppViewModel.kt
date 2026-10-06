@@ -136,6 +136,17 @@ class AppViewModel(
         }
     }
 
+    fun firebaseLogin(idToken: String) = launchBusy {
+        when (val result = repository.firebaseLogin(idToken)) {
+            is ApiResult.Success -> {
+                _state.update { it.copy(currentUser = result.value) }
+                _events.emit(UiEvent.Message(result.message.ifBlank { "Signed in with Google." }))
+                _events.emit(UiEvent.Navigate("home"))
+            }
+            is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
+        }
+    }
+
     fun forgotPassword(email: String) = launchBusy {
         when (val result = repository.forgotPassword(email.trim())) {
             is ApiResult.Success -> _events.emit(UiEvent.Message(result.message))
@@ -146,9 +157,19 @@ class AppViewModel(
     fun register(name: String, email: String, city: String, password: String, confirm: String) = launchBusy {
         when (val result = repository.register(name.trim(), email.trim(), city.trim(), password, confirm)) {
             is ApiResult.Success -> {
-                _state.update { it.copy(currentUser = result.value) }
-                _events.emit(UiEvent.Message(result.message.ifBlank { "Account created!" }))
-                _events.emit(UiEvent.Navigate("home"))
+                if (!result.value.emailVerified) {
+                    _state.update {
+                        it.copy(
+                            currentUser = null,
+                            registrationRequiresVerification = true,
+                        )
+                    }
+                    _events.emit(UiEvent.Message(result.message.ifBlank { "Verify your email address before signing in." }))
+                } else {
+                    _state.update { it.copy(currentUser = result.value, registrationRequiresVerification = false) }
+                    _events.emit(UiEvent.Message(result.message.ifBlank { "Account created!" }))
+                    _events.emit(UiEvent.Navigate("home"))
+                }
             }
             is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
         }

@@ -9,7 +9,7 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
         android:theme="@style/Theme.HiddenGems"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -28,6 +28,12 @@
                 <data android:host="10.0.2.2" />
                 <data android:pathPrefix="/verify-email.php" />
                 <data android:pathPrefix="/reset-password.php" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="mzansigem" android:host="auth" />
             </intent-filter>
         </activity>
     </application>

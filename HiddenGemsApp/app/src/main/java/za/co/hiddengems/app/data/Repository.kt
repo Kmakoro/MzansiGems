@@ -47,6 +47,19 @@ class HiddenGemsRepository(
     suspend fun register(name: String, email: String, city: String, password: String, confirm: String): ApiResult<User> =
         when (val result = call { api.register(RegisterRequest(name, email, city, password, confirm)) }) {
             is ApiResult.Success -> {
+                if (result.value.token.isBlank()) {
+                    session.clear()
+                } else {
+                    session.saveToken(result.value.token)
+                }
+                ApiResult.Success(result.value.user, result.message)
+            }
+            is ApiResult.Error -> result
+        }
+
+    suspend fun firebaseLogin(idToken: String): ApiResult<User> =
+        when (val result = call { api.firebaseLogin(FirebaseLoginRequest(idToken)) }) {
+            is ApiResult.Success -> {
                 session.saveToken(result.value.token)
                 ApiResult.Success(result.value.user, result.message)
             }

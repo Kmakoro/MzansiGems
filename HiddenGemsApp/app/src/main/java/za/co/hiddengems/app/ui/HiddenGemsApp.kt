@@ -216,6 +216,7 @@ fun MzansiGemApp(viewModel: AppViewModel) {
                             siteName = state.siteName,
                             onBack = { navController.popBackStack() },
                             onLogin = viewModel::login,
+                            onFirebaseLogin = viewModel::firebaseLogin,
                             onForgotPassword = viewModel::forgotPassword,
                             onResetPassword = viewModel::apiResetPassword,
                             onDismissReset = { viewModel.setResetToken(null) },

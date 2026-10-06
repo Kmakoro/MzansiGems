@@ -13,6 +13,7 @@ services:
       DB_PASS: hidden_gems_password
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      FIREBASE_WEB_API_KEY: ${FIREBASE_WEB_API_KEY:-}
       MAIL_FROM: ${MAIL_FROM:-}
       API_ALLOWED_ORIGIN: ${API_ALLOWED_ORIGIN:-*}
     volumes:

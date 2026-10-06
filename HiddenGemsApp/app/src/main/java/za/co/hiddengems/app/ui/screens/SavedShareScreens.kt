@@ -68,6 +68,7 @@ import za.co.hiddengems.app.data.Gem
 import za.co.hiddengems.app.data.GemDraft
 import za.co.hiddengems.app.ui.AppUiState
 import za.co.hiddengems.app.ui.components.GemCard
+import za.co.hiddengems.app.validation.ShareGemValidation
 
 @Composable
 fun SavedScreen(
@@ -302,17 +303,16 @@ fun ShareGemScreen(
             item {
                 Button(
                     onClick = {
-                        error = when {
-                            title.trim().length !in 3..100 -> "Name must be 3 to 100 characters."
-                            description.trim().length !in 20..500 -> "Description must be 20 to 500 characters."
-                            location.isBlank() -> "Location is required."
-                            city.isBlank() -> "City is required."
-                            selectedVibes.isEmpty() -> "Select at least one vibe."
-                            budget.isBlank() -> "Select a budget level."
-                            activity.isBlank() -> "Select an activity type."
-                            rating !in 1..5 -> "Choose a rating from 1 to 5."
-                            else -> ""
-                        }
+                        error = ShareGemValidation.error(
+                            title = title,
+                            description = description,
+                            location = location,
+                            city = city,
+                            vibes = selectedVibes.toList(),
+                            budget = budget,
+                            activity = activity,
+                            rating = rating,
+                        ).orEmpty()
                         if (error.isBlank()) {
                             onSubmit(
                                 GemDraft(
