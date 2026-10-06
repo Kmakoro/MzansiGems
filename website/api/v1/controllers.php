@@ -60,6 +60,111 @@ function api_auth_login(): never
     api_response(['token' => $token, 'token_type' => 'Bearer', 'user' => api_public_user($user)], 'Welcome back!');
 }
 
+function api_auth_firebase(): never
+{
+    if (FIREBASE_WEB_API_KEY === '') {
+        api_error('Firebase authentication is not configured on the server.', 503);
+    }
+
+    $input = api_input();
+    $idToken = trim((string)($input['id_token'] ?? ''));
+    if ($idToken === '') {
+        api_error('Firebase ID token is required.', 422);
+    }
+
+    $firebaseUser = api_verify_firebase_id_token($idToken);
+    $firebaseUid = trim((string)($firebaseUser['localId'] ?? ''));
+    $email = strtolower(trim((string)($firebaseUser['email'] ?? '')));
+    $name = trim((string)($firebaseUser['displayName'] ?? 'Google User'));
+
+    if ($firebaseUid === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        api_error('Google sign-in did not return a usable account.', 401);
+    }
+    if (($firebaseUser['emailVerified'] ?? false) !== true) {
+        api_error('Your Google email address is not verified.', 403);
+    }
+
+    $stmt = db()->prepare('SELECT * FROM users WHERE firebase_uid = ? LIMIT 1');
+    $stmt->execute([$firebaseUid]);
+    $user = $stmt->fetch();
+
+    if (!$user) {
+        $stmt = db()->prepare('SELECT * FROM users WHERE email = ? LIMIT 1');
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+
+        if ($user && !empty($user['firebase_uid']) && !hash_equals((string)$user['firebase_uid'], $firebaseUid)) {
+            api_error('This email address is already linked to another Google account.', 409);
+        }
+
+        if ($user) {
+            db()->prepare('UPDATE users SET firebase_uid = ?, email_verified_at = COALESCE(email_verified_at, NOW()) WHERE id = ?')
+                ->execute([$firebaseUid, (int)$user['id']]);
+        } else {
+            if (setting('allow_registration', '1') !== '1') {
+                api_error('New registrations are currently disabled.', 403);
+            }
+            $safeName = mb_substr($name !== '' ? $name : 'Google User', 0, 100);
+            $randomPassword = password_hash(bin2hex(random_bytes(32)), PASSWORD_DEFAULT);
+            $stmt = db()->prepare(
+                'INSERT INTO users (full_name,email,firebase_uid,city,password_hash,email_verified_at) VALUES (?,?,?,?,?,NOW())'
+            );
+            $stmt->execute([$safeName, $email, $firebaseUid, 'Not specified', $randomPassword]);
+            $userId = (int)db()->lastInsertId();
+            record_activity($userId, 'user_joined', $safeName . ' joined with Google on Android.');
+        }
+
+        $stmt = db()->prepare('SELECT * FROM users WHERE email = ? LIMIT 1');
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+    }
+
+    if (!$user || $user['status'] !== 'active') {
+        api_error('This account is suspended or unavailable.', 403);
+    }
+
+    $token = api_issue_token((int)$user['id'], (string)($input['device_name'] ?? 'Mzansi Gem Android - Google'));
+    record_activity((int)$user['id'], 'mobile_login', $user['full_name'] . ' signed in with Google on Android.');
+
+    api_response(
+        ['token' => $token, 'token_type' => 'Bearer', 'user' => api_public_user($user)],
+        'Signed in with Google successfully.'
+    );
+}
+
+function api_verify_firebase_id_token(string $idToken): array
+{
+    if (!function_exists('curl_init')) {
+        api_error('The PHP cURL extension is required for Firebase authentication.', 500);
+    }
+
+    $url = 'https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' . rawurlencode(FIREBASE_WEB_API_KEY);
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 20,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_POSTFIELDS => json_encode(['idToken' => $idToken], JSON_THROW_ON_ERROR),
+    ]);
+
+    $response = curl_exec($ch);
+    $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($response === false || $status !== 200) {
+        api_error('Google sign-in could not be verified.', 401);
+    }
+
+    $decoded = json_decode((string)$response, true);
+    $firebaseUser = $decoded['users'][0] ?? null;
+    if (!is_array($firebaseUser)) {
+        api_error('Google sign-in could not be verified.', 401);
+    }
+    return $firebaseUser;
+}
+
 function api_auth_forgot_password(): never
 {
     $email = strtolower(trim((string)(api_input()['email'] ?? '')));
@@ -73,12 +178,16 @@ function api_auth_forgot_password(): never
             db()->prepare('INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))')
                 ->execute([(int)$userId, hash('sha256', $token)]);
             $resetLink = api_request_origin() . '/reset-password.php?token=' . urlencode($token);
+            $appResetLink = 'mzansigem://auth/reset-password?token=' . urlencode($token);
             send_app_email($email, 'Reset your Mzansi Gem password', "A password reset was requested for your Mzansi Gem account.
 
-Reset your password using this link:
+Website:
 {$resetLink}
 
-This link expires in one hour.");
+Android app:
+{$appResetLink}
+
+These links expire in one hour.");
         }
     }
     api_response(null, 'If the account exists, a password reset link has been sent.');
