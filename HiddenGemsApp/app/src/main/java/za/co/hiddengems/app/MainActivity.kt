@@ -48,8 +48,10 @@ class MainActivity : ComponentActivity() {
         val token = uri.getQueryParameter("token")
         if (token != null) {
             when {
-                uri.path?.contains("verify-email") == true -> viewModel.verifyEmail(token)
-                uri.path?.contains("reset-password") == true -> viewModel.setResetToken(token)
+                uri.path?.contains("verify-email") == true || uri.host == "auth" && uri.path?.contains("verify-email") == true ->
+                    viewModel.verifyEmail(token)
+                uri.path?.contains("reset-password") == true || uri.host == "auth" && uri.path?.contains("reset-password") == true ->
+                    viewModel.setResetToken(token)
             }
         }
     }
