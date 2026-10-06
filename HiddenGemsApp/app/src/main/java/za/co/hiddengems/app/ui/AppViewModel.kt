@@ -136,6 +136,17 @@ class AppViewModel(
         }
     }
 
+    fun firebaseLogin(idToken: String) = launchBusy {
+        when (val result = repository.firebaseLogin(idToken)) {
+            is ApiResult.Success -> {
+                _state.update { it.copy(currentUser = result.value) }
+                _events.emit(UiEvent.Message(result.message.ifBlank { "Signed in with Google." }))
+                _events.emit(UiEvent.Navigate("home"))
+            }
+            is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
+        }
+    }
+
     fun forgotPassword(email: String) = launchBusy {
         when (val result = repository.forgotPassword(email.trim())) {
             is ApiResult.Success -> _events.emit(UiEvent.Message(result.message))
