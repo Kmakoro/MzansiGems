@@ -22,6 +22,7 @@ if ($route === '/health' && $method === 'GET') {
 $routes = [
     ['POST', '#^/auth/register$#', 'api_auth_register'],
     ['POST', '#^/auth/login$#', 'api_auth_login'],
+    ['POST', '#^/auth/firebase$#', 'api_auth_firebase'],
     ['POST', '#^/auth/forgot-password$#', 'api_auth_forgot_password'],
     ['POST', '#^/auth/logout$#', 'api_auth_logout'],
     ['GET', '#^/auth/me$#', 'api_auth_me'],
