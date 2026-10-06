@@ -31,4 +31,5 @@ define('DB_USER', (string)(getenv('DB_USER') ?: 'root'));
 define('DB_PASS', (string)(getenv('DB_PASS') ?: ''));
 define('GOOGLE_CLIENT_ID', (string)(getenv('GOOGLE_CLIENT_ID') ?: ''));
 define('GOOGLE_CLIENT_SECRET', (string)(getenv('GOOGLE_CLIENT_SECRET') ?: ''));
+define('FIREBASE_WEB_API_KEY', (string)(getenv('FIREBASE_WEB_API_KEY') ?: ''));
 define('MAIL_FROM', (string)(getenv('MAIL_FROM') ?: ''));
