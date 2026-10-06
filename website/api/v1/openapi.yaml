@@ -41,6 +41,19 @@ paths:
       responses:
         '200': { description: Authenticated }
         '401': { description: Invalid credentials }
+  /auth/firebase:
+    post:
+      security: []
+      summary: Sign in to Android with a Firebase Google ID token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FirebaseLoginRequest' }
+      responses:
+        '200': { description: Authenticated and linked to the shared MySQL user }
+        '401': { description: Invalid Firebase token }
+        '503': { description: Firebase is not configured }
   /auth/forgot-password:
     post:
       security: []
@@ -300,6 +313,12 @@ components:
       properties:
         email: { type: string, format: email }
         password: { type: string, format: password }
+        device_name: { type: string }
+    FirebaseLoginRequest:
+      type: object
+      required: [id_token]
+      properties:
+        id_token: { type: string, description: Firebase ID token obtained after Google sign-in }
         device_name: { type: string }
     RegisterRequest:
       type: object
