@@ -22,6 +22,7 @@ CREATE TABLE users (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
     email VARCHAR(190) NOT NULL UNIQUE,
+    firebase_uid VARCHAR(128) NULL UNIQUE,
     city VARCHAR(100) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     email_verified_at DATETIME NULL,
