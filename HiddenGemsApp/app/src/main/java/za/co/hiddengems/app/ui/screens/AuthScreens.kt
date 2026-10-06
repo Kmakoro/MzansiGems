@@ -1,5 +1,7 @@
 package za.co.hiddengems.app.ui.screens
 
+import android.app.Activity
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,8 +49,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -59,6 +63,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import za.co.hiddengems.app.auth.AuthValidation
+import za.co.hiddengems.app.auth.FirebaseGoogleSignIn
 import za.co.hiddengems.app.ui.components.AppLogo
 import za.co.hiddengems.app.ui.theme.Orange
 import za.co.hiddengems.app.ui.theme.OrangeDark
@@ -72,6 +79,7 @@ fun LoginScreen(
     siteName: String,
     onBack: () -> Unit,
     onLogin: (String, String) -> Unit,
+    onFirebaseLogin: (String) -> Unit,
     onForgotPassword: (String) -> Unit,
     onResetPassword: (String, String) -> Unit,
     onDismissReset: () -> Unit,
@@ -84,6 +92,10 @@ fun LoginScreen(
     var resetEmail by remember { mutableStateOf("") }
     var localError by remember { mutableStateOf("") }
     var rememberMe by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val scope = rememberCoroutineScope()
+    val googleSignIn = remember(activity) { activity?.let(::FirebaseGoogleSignIn) }
 
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -115,9 +127,15 @@ fun LoginScreen(
             )
             Spacer(Modifier.height(16.dp))
             Button(
-                onClick = { onResetPassword(newPassword, confirmPassword) },
+                onClick = {
+                    localError = AuthValidation.passwordResetError(newPassword, confirmPassword).orEmpty()
+                    if (localError.isBlank()) onResetPassword(newPassword, confirmPassword)
+                },
                 modifier = Modifier.fillMaxWidth().height(50.dp)
             ) { Text("Update Password") }
+            if (localError.isNotBlank()) {
+                Text(localError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
             TextButton(onClick = onDismissReset, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
         } else {
             Text("Welcome Back!", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
@@ -167,18 +185,32 @@ fun LoginScreen(
             Spacer(Modifier.height(12.dp))
             Button(
                 onClick = {
-                    localError = when {
-                        !email.contains('@') -> "Enter a valid email address."
-                        password.isBlank() -> "Enter your password."
-                        else -> ""
-                    }
+                    localError = AuthValidation.loginError(email, password).orEmpty()
                     if (localError.isBlank()) onLogin(email, password)
                 },
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
             ) { Text("Sign In") }
             Spacer(Modifier.height(12.dp))
-            OutlinedButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = {
+                    localError = ""
+                    val manager = googleSignIn
+                    if (manager == null) {
+                        localError = "Google sign-in requires an Android Activity."
+                    } else {
+                        scope.launch {
+                            manager.signIn()
+                                .onSuccess(onFirebaseLogin)
+                                .onFailure { error ->
+                                    localError = error.message ?: "Google sign-in failed. Please try again."
+                                }
+                        }
+                    }
+                },
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text("◉ Continue with Google")
             }
         }
@@ -336,14 +368,7 @@ fun RegisterScreen(
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = {
-                localError = when {
-                    name.trim().length < 2 -> "Full name must have at least 2 characters."
-                    !email.contains('@') -> "Enter a valid email address."
-                    city.isBlank() -> "City is required."
-                    password.length < 8 -> "Password must have at least 8 characters."
-                    password != confirm -> "Passwords do not match."
-                    else -> ""
-                }
+                localError = AuthValidation.registrationError(name, email, city, password, confirm).orEmpty()
                 if (localError.isBlank()) onRegister(name, email, city, password, confirm)
             },
             enabled = !busy,
