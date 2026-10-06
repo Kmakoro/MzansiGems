@@ -53,6 +53,15 @@ class HiddenGemsRepository(
             is ApiResult.Error -> result
         }
 
+    suspend fun firebaseLogin(idToken: String): ApiResult<User> =
+        when (val result = call { api.firebaseLogin(FirebaseLoginRequest(idToken)) }) {
+            is ApiResult.Success -> {
+                session.saveToken(result.value.token)
+                ApiResult.Success(result.value.user, result.message)
+            }
+            is ApiResult.Error -> result
+        }
+
     suspend fun forgotPassword(email: String) = call { api.forgotPassword(mapOf("email" to email)) }
 
     suspend fun logout(): ApiResult<Unit> {
