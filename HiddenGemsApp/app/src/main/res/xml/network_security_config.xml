@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Development only: enables a physical phone to reach a local XAMPP/Docker API over Wi-Fi.
-         Production deployments must use HTTPS and disable cleartext traffic. -->
-    <base-config cleartextTrafficPermitted="true" />
+    <base-config cleartextTrafficPermitted="false" />
 </network-security-config>
