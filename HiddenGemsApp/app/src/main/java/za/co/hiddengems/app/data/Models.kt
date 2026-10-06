@@ -38,6 +38,11 @@ data class RegisterRequest(
     @SerializedName("device_name") val deviceName: String = "Mzansi Gem Android",
 )
 
+data class FirebaseLoginRequest(
+    @SerializedName("id_token") val idToken: String,
+    @SerializedName("device_name") val deviceName: String = "Mzansi Gem Android - Google",
+)
+
 data class Preferences(
     @SerializedName("notify_new_gems") val notifyNewGems: Boolean = true,
     @SerializedName("notify_comments") val notifyComments: Boolean = true,
