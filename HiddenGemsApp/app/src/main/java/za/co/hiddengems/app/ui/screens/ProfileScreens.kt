@@ -271,6 +271,7 @@ fun SettingsScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            item { HelpSupportCard() }
             item { SettingsHeading(Icons.Default.Person, "Profile information") }
             item { OutlinedTextField(name, { name = it }, label = { Text("Full name") }, modifier = Modifier.fillMaxWidth()) }
             item { OutlinedTextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth()) }
@@ -291,28 +292,6 @@ fun SettingsScreen(
             item { SettingsToggle("Show saved gems on profile", "Let others see your saved list", preferences.showSavedGems) { preferences = preferences.copy(showSavedGems = it) } }
             item { SettingsToggle("Show activity status", "Display when you are active", preferences.showActivityStatus) { preferences = preferences.copy(showActivityStatus = it) } }
             item { Button(onClick = { onSavePreferences(preferences) }, modifier = Modifier.fillMaxWidth()) { Text("Save preferences") } }
-
-            item { SettingsHeading(Icons.Default.HelpOutline, "Help & Support") }
-            item {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                ) {
-                    Column(
-                        Modifier.fillMaxWidth().padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text("Quick help", fontWeight = FontWeight.Bold)
-                        Text("Discover: search and filter gems by city, vibe, budget or activity.")
-                        Text("Share: sign in and use the Share tab to submit a place.")
-                        Text("Saved: save gems and keep private notes for later.")
-                        Text("Google sign-in: use Continue with Google on the sign-in screen.")
-                        Text("Sync: the Android app and website use the same API and MySQL database.")
-                        Text("Real phone: when developing locally, use your computer LAN IP instead of 10.0.2.2.")
-                        Text("More help: see USER_GUIDE.md in the Android project.")
-                    }
-                }
-            }
 
             item { SettingsHeading(Icons.Default.Lock, "Security") }
             item { OutlinedButton(onClick = { showPasswordDialog = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Lock, null); Spacer(Modifier.width(6.dp)); Text("Change password") } }
@@ -370,6 +349,67 @@ fun SettingsScreen(
             },
             dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } },
         )
+    }
+}
+
+@Composable
+private fun HelpSupportCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.HelpOutline,
+                    contentDescription = "Help and Support",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text(
+                        "Help & Support",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    Text(
+                        "Quick help for using Mzansi Gem",
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
+
+            Text(
+                "• Discover: search and filter gems by city, vibe, budget or activity.\n" +
+                    "• Share: use the Share tab to submit a hidden gem.\n" +
+                    "• Saved: save gems and add private notes.\n" +
+                    "• Google sign-in: tap Continue with Google on the sign-in screen.\n" +
+                    "• Password help: use Forgot password on the sign-in screen.\n" +
+                    "• Sync: the Android app and website use the same API and MySQL database.",
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+
+            Text(
+                "Troubleshooting",
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+            Text(
+                "If the app shows API Offline, check the server/network connection. " +
+                    "For local testing on a real phone, use your computer's LAN IP instead of 10.0.2.2.",
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
     }
 }
 
