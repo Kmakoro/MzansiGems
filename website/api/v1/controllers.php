@@ -670,12 +670,12 @@ function api_profile_settings(): never
     $user = api_require_user();
     $input = api_input();
     $values = [
-        api_bool($input['notify_new_gems'] ?? $user['notify_new_gems']),
-        api_bool($input['notify_comments'] ?? $user['notify_comments']),
-        api_bool($input['notify_likes_saves'] ?? $user['notify_likes_saves']),
-        api_bool($input['personalized_recommendations'] ?? $user['personalized_recommendations']),
-        api_bool($input['show_saved_gems'] ?? $user['show_saved_gems']),
-        api_bool($input['show_activity_status'] ?? $user['show_activity_status']),
+        (int)api_bool($input['notify_new_gems'] ?? $user['notify_new_gems']),
+        (int)api_bool($input['notify_comments'] ?? $user['notify_comments']),
+        (int)api_bool($input['notify_likes_saves'] ?? $user['notify_likes_saves']),
+        (int)api_bool($input['personalized_recommendations'] ?? $user['personalized_recommendations']),
+        (int)api_bool($input['show_saved_gems'] ?? $user['show_saved_gems']),
+        (int)api_bool($input['show_activity_status'] ?? $user['show_activity_status']),
         (int)$user['id'],
     ];
     db()->prepare('UPDATE users SET notify_new_gems=?,notify_comments=?,notify_likes_saves=?,personalized_recommendations=?,show_saved_gems=?,show_activity_status=? WHERE id=?')->execute($values);
