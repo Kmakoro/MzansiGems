@@ -27,3 +27,8 @@ Android JUnit tests cover authentication validation, password-reset validation a
 
 ## Final physical-device pass
 Before recording the demo, run every relevant row above on the exact physical phone used for the demonstration.
+
+
+## Shared database integration automation
+
+GitHub Actions also runs `website/tests/shared_database_integration.php`. This test starts the PHP API against the CI MySQL database, signs in with the seeded user, changes profile/settings through the REST API used by Android, and reads those same values through the website database connection. It also checks like/save state against MySQL. This provides repeatable evidence that the Android API and website use the same database.
