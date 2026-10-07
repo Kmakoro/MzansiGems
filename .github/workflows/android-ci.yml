@@ -121,6 +121,28 @@ jobs:
             fi
           done
 
+      - name: Verify website and Android API use same database
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: hidden_gems
+          DB_USER: root
+          DB_PASS: root
+          APP_ENV: development
+          APP_URL: http://127.0.0.1:8080
+          TEST_API_URL: http://127.0.0.1:8080/api/v1
+        run: |
+          php -S 127.0.0.1:8080 -t website website/tests/ci-router.php > /tmp/mzansi-api.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8080/api/v1/health >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          php website/tests/shared_database_integration.php
+
       - name: Verify Firebase identity column
         env:
           MYSQL_PWD: root
