@@ -260,3 +260,11 @@ The Android Settings screen now contains **Help & Support**. A full guide is in 
 - `docs/TEST_PLAN.md` - physical-device/integration test plan
 - `docs/FINAL_SUBMISSION_CHECKLIST.md` - final submission and video evidence checklist
 - `docs/AZURE_DEVOPS_EVIDENCE.md` - checklist for genuine Azure DevOps evidence
+
+## APK for phones on any network
+
+A physical Android phone **cannot** reach the emulator-only default `10.0.2.2`. For an app that works over Wi-Fi and mobile data from any location, first host the existing PHP website/API and single shared MySQL database at a public HTTPS domain.
+
+Set the GitHub Actions **repository variable** `PUBLIC_API_BASE_URL` to the public PHP REST API address, such as `https://YOUR-DOMAIN.example/api/v1/`. The workflow checks the API health endpoint and builds a separately labelled `mzansi-gem-anywhere-apk` artifact when the variable exists. It continues producing `mzansi-gem-debug-apk` for emulator-only development.
+
+For the XAMPP missing-table error, safe database checks, PHP Firebase server configuration, and full internet hosting steps, see [PHONE_ANYWHERE_DEPLOYMENT.md](docs/PHONE_ANYWHERE_DEPLOYMENT.md). Never import `website/database/install.sql` into a populated database because it drops tables.
