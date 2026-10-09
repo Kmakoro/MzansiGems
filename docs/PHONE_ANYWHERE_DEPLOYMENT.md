@@ -60,7 +60,8 @@ Choose PHP/MySQL hosting with a fixed public domain or subdomain, HTTPS/TLS, sui
 5. Configure the website's Google OAuth client ID/secret separately if you also use Google login on the website. Update allowed callback/redirect URLs for your new domain. Do not use localhost callbacks in production.
 6. Ensure the host can write `uploads/` and that private configuration files cannot be served over HTTP.
 7. Open `https://YOUR-DOMAIN.example/api/v1/health` in a browser on another network; it should return a successful JSON health response. Also test `/api/v1/gems`.
-8. Enable and verify HTTPS before handing out an Android build.
+8. **Security before exposure:** Remove/disable seeded demo accounts (especially any known test administrator credentials), change weak/example passwords, and disable public debug/error output. The coursework seed database must not be exposed to the internet with its example login credentials intact.
+9. Enable and verify HTTPS before handing out an Android build.
 
 ## GitHub Actions: APK for any supported Android phone
 
