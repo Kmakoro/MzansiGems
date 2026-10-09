@@ -168,6 +168,15 @@ jobs:
         run: |
           mysql -h 127.0.0.1 -P 3306 -uroot < website/database/install.sql
 
+      - name: Check PHP database table presence without changing data
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: hidden_gems
+          DB_USER: root
+          DB_PASS: root
+        run: php website/scripts/check_database.php
+
       - name: Verify required database records
         env:
           MYSQL_PWD: root
