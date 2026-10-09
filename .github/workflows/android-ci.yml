@@ -91,6 +91,43 @@ jobs:
           name: mzansi-gem-debug-apk
           path: HiddenGemsApp/app/build/outputs/apk/debug/app-debug.apk
 
+      # This optional second artifact is usable from any phone/network once a
+      # publicly reachable HTTPS PHP API is deployed and PUBLIC_API_BASE_URL is set.
+      # Localhost / 10.0.2.2 debug builds must never be labelled as phone-ready.
+      - name: Validate public HTTPS API for phone APK
+        if: ${{ github.event_name != 'pull_request' && vars.PUBLIC_API_BASE_URL != '' }}
+        env:
+          PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
+        run: |
+          set -euo pipefail
+          case "$PUBLIC_API_BASE_URL" in
+            https://*/api/v1/) ;;
+            *) echo "::error::PUBLIC_API_BASE_URL must be an HTTPS URL ending in /api/v1/"; exit 1 ;;
+          esac
+          host="$(printf '%s' "$PUBLIC_API_BASE_URL" | sed -E 's@^https://([^/:]+).*@\1@')"
+          case "$host" in
+            localhost|127.*|10.*|192.168.*|169.254.*|172.16.*|172.17.*|172.18.*|172.19.*|172.2?.*|172.30.*|172.31.*|*.local)
+              echo "::error::The Android phone APK needs a publicly reachable HTTPS API, not a LAN/emulator address."
+              exit 1
+              ;;
+          esac
+          curl --fail --silent --show-error --location --max-time 25 "${PUBLIC_API_BASE_URL}health" > /tmp/mzansi-phone-api-health.json
+          python3 -c 'import json; x=json.load(open("/tmp/mzansi-phone-api-health.json")); assert x.get("success") is True and x.get("data", {}).get("status") == "healthy", "Public API health endpoint failed"'
+          echo "Public HTTPS PHP API health check passed."
+
+      - name: Build Android APK for phones anywhere
+        if: ${{ github.event_name != 'pull_request' && vars.PUBLIC_API_BASE_URL != '' }}
+        env:
+          PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
+        run: ./gradlew assembleDebug -PAPI_BASE_URL="$PUBLIC_API_BASE_URL" --no-daemon
+
+      - name: Upload phone-ready APK
+        if: ${{ github.event_name != 'pull_request' && vars.PUBLIC_API_BASE_URL != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mzansi-gem-anywhere-apk
+          path: HiddenGemsApp/app/build/outputs/apk/debug/app-debug.apk
+
   php-and-database:
     runs-on: ubuntu-latest
     services:
