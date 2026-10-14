@@ -1,0 +1,14 @@
+
+# macOS files
+.DS_Store
+
+# Local recovery test
+website-recovery-test/
+
+# Private environment files
+.env
+.env.*
+!.env.example
+
+# Local backups
+backups/
