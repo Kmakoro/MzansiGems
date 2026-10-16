@@ -57,8 +57,8 @@ class HiddenGemsRepository(
             is ApiResult.Error -> result
         }
 
-    suspend fun firebaseLogin(idToken: String): ApiResult<User> =
-        when (val result = call { api.firebaseLogin(FirebaseLoginRequest(idToken)) }) {
+    suspend fun firebaseLogin(idToken: String, googleDisplayName: String?): ApiResult<User> =
+        when (val result = call { api.firebaseLogin(FirebaseLoginRequest(idToken, googleDisplayName)) }) {
             is ApiResult.Success -> {
                 session.saveToken(result.value.token)
                 ApiResult.Success(result.value.user, result.message)
