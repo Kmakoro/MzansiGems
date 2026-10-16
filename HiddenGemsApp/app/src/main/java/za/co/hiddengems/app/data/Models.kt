@@ -40,6 +40,7 @@ data class RegisterRequest(
 
 data class FirebaseLoginRequest(
     @SerializedName("id_token") val idToken: String,
+    @SerializedName("google_display_name") val googleDisplayName: String? = null,
     @SerializedName("device_name") val deviceName: String = "Mzansi Gem Android - Google",
 )
 
