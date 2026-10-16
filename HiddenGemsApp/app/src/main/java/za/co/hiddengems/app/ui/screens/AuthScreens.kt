@@ -1,6 +1,9 @@
 package za.co.hiddengems.app.ui.screens
 
 import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.common.api.ApiException
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -66,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import za.co.hiddengems.app.auth.AuthValidation
 import za.co.hiddengems.app.auth.FirebaseGoogleSignIn
+import za.co.hiddengems.app.auth.GoogleAccountReauthException
 import za.co.hiddengems.app.ui.components.AppLogo
 import za.co.hiddengems.app.ui.theme.Orange
 import za.co.hiddengems.app.ui.theme.OrangeDark
@@ -96,6 +100,26 @@ fun LoginScreen(
     val activity = context as? Activity
     val scope = rememberCoroutineScope()
     val googleSignIn = remember(activity) { activity?.let(::FirebaseGoogleSignIn) }
+    val alternateSignIn = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val manager = googleSignIn
+        if (manager == null) {
+            localError = "Google sign-in requires an Android Activity."
+        } else {
+            scope.launch {
+                manager.finishAlternateSignIn(result.data)
+                    .onSuccess(onFirebaseLogin)
+                    .onFailure { error ->
+                        localError = if (error is ApiException) {
+                            "Google sign-in failed (status ${error.statusCode}). Check the Android OAuth settings."
+                        } else {
+                            error.message ?: "Google sign-in failed. Please try again."
+                        }
+                    }
+            }
+        }
+    }
 
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -203,7 +227,18 @@ fun LoginScreen(
                             manager.signIn()
                                 .onSuccess(onFirebaseLogin)
                                 .onFailure { error ->
-                                    localError = error.message ?: "Google sign-in failed. Please try again."
+                                    if (error is GoogleAccountReauthException) {
+                                        // Use a separate Google Play services flow only for [16].
+                                        runCatching {
+                                            alternateSignIn.launch(manager.alternateSignInIntent())
+                                        }.onFailure { fallbackError ->
+                                            localError = fallbackError.message
+                                                ?: "Alternative Google sign-in could not start."
+                                        }
+                                    } else {
+                                        localError = error.message
+                                            ?: "Google sign-in failed. Please try again."
+                                    }
                                 }
                         }
                     }
