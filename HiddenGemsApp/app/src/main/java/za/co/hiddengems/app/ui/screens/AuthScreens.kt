@@ -220,12 +220,6 @@ fun LoginScreen(
             Text("Don't have an account?")
             TextButton(onClick = onRegister) { Text("Sign up") }
         }
-        Text(
-            "Demo: user@mzansigem.local / User@123",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp)
-        )
         if (serverOnline != null) {
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
