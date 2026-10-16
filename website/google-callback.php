@@ -43,12 +43,17 @@ $userResponse = curl_exec($ch);
 $userStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 $googleUser = json_decode((string)$userResponse, true);
-if ($userStatus !== 200 || empty($googleUser['email'])) {
-    flash('danger', 'Google did not return a usable email address.');
+if ($userStatus !== 200 || empty($googleUser['email'])
+    || ($googleUser['email_verified'] ?? false) !== true) {
+    flash('danger', 'Google did not return a verified email address.');
     redirect('login.php');
 }
 
 $email = strtolower(trim((string)$googleUser['email']));
+$verifiedGoogleName = trim((string)($googleUser['name'] ?? ''));
+if (mb_strlen($verifiedGoogleName) < 2 || mb_strlen($verifiedGoogleName) > 100) {
+    $verifiedGoogleName = '';
+}
 $stmt = db()->prepare('SELECT * FROM users WHERE email = ? LIMIT 1');
 $stmt->execute([$email]);
 $user = $stmt->fetch();
@@ -57,7 +62,7 @@ if (!$user) {
         flash('danger', 'New registrations are currently disabled.');
         redirect('login.php');
     }
-    $name = trim((string)($googleUser['name'] ?? 'Google User')) ?: 'Google User';
+    $name = $verifiedGoogleName !== '' ? $verifiedGoogleName : 'Google User';
     $stmt = db()->prepare('INSERT INTO users (full_name,email,city,password_hash,email_verified_at) VALUES (?,?,?,?,NOW())');
     $stmt->execute([$name, $email, 'Not specified', password_hash(bin2hex(random_bytes(24)), PASSWORD_DEFAULT)]);
     $id = (int)db()->lastInsertId();
@@ -69,6 +74,14 @@ if (!$user) {
 if ($user['status'] !== 'active') {
     flash('danger', 'This account is suspended.');
     redirect('login.php');
+}
+// Website and Android share the same users table. Repair the legacy Google
+// placeholder when the actual name comes from Google's verified userinfo.
+// Preserve any name the member customized in Profile Settings.
+if ((string)$user['full_name'] === 'Google User' && $verifiedGoogleName !== '') {
+    db()->prepare("UPDATE users SET full_name = ? WHERE id = ? AND full_name = 'Google User'")
+        ->execute([$verifiedGoogleName, (int)$user['id']]);
+    $user['full_name'] = $verifiedGoogleName;
 }
 login_user($user, true);
 flash('success', 'Signed in with Google.');

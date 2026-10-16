@@ -2,6 +2,7 @@ package za.co.hiddengems.app.auth
 
 import android.app.Activity
 import android.content.Intent
+import android.util.Base64
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.exceptions.GetCredentialException
@@ -15,14 +16,20 @@ import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
+import org.json.JSONObject
 import kotlinx.coroutines.tasks.await
 import za.co.hiddengems.app.BuildConfig
 
 class GoogleAccountReauthException(cause: Throwable) :
     IllegalStateException("Google could not reauthenticate this account.", cause)
 
+data class GoogleLoginIdentity(
+    val firebaseIdToken: String,
+    val googleDisplayName: String?,
+)
+
 class FirebaseGoogleSignIn(private val activity: Activity) {
-    suspend fun signIn(): Result<String> = runCatching {
+    suspend fun signIn(): Result<GoogleLoginIdentity> = runCatching {
         ensureFirebaseApp()
         val webClientId = webClientId()
         val request = GetCredentialRequest.Builder()
@@ -62,7 +69,7 @@ class FirebaseGoogleSignIn(private val activity: Activity) {
     }
 
     @Suppress("DEPRECATION")
-    suspend fun finishAlternateSignIn(intent: Intent?): Result<String> = runCatching {
+    suspend fun finishAlternateSignIn(intent: Intent?): Result<GoogleLoginIdentity> = runCatching {
         val account = GoogleSignIn.getSignedInAccountFromIntent(intent).await()
         val idToken = account.idToken ?: error("Google did not provide an ID token.")
         exchangeGoogleIdToken(idToken, account.displayName)
@@ -76,7 +83,7 @@ class FirebaseGoogleSignIn(private val activity: Activity) {
         return id
     }
 
-    private suspend fun exchangeGoogleIdToken(googleIdToken: String, googleDisplayName: String?): String {
+    private suspend fun exchangeGoogleIdToken(googleIdToken: String, googleDisplayName: String?): GoogleLoginIdentity {
         val app = ensureFirebaseApp()
         val auth = FirebaseAuth.getInstance(app)
         val authResult = auth.signInWithCredential(
@@ -89,7 +96,14 @@ class FirebaseGoogleSignIn(private val activity: Activity) {
         // Populate only missing/placeholder Firebase names so our PHP API can
         // repair the existing "Google User" database record on the next login.
         // Never replace a customized Firebase profile name.
-        val name = googleDisplayName?.trim()?.takeIf {
+        val providerName = user.providerData
+            .firstOrNull { it.providerId == "google.com" }?.displayName
+        val name = listOfNotNull(
+            googleDisplayName,
+            providerName,
+            user.displayName,
+            nameClaimFromGoogleIdToken(googleIdToken),
+        ).map { it.trim() }.firstOrNull {
             it.length in 2..100 && it != "Google User"
         }
         if (name != null && (user.displayName.isNullOrBlank() || user.displayName == "Google User")) {
@@ -105,8 +119,23 @@ class FirebaseGoogleSignIn(private val activity: Activity) {
         val firebaseIdToken = user.getIdToken(true).await().token
             ?: error("Firebase did not return an ID token.")
         auth.signOut()
-        return firebaseIdToken
+        return GoogleLoginIdentity(firebaseIdToken, name)
     }
+
+    // Google's signed ID token may carry the profile name even when the
+    // Google account chooser and Firebase user objects omit displayName.
+    // The token is accepted only after signInWithCredential verifies it.
+    private fun nameClaimFromGoogleIdToken(googleIdToken: String): String? = runCatching {
+        val encodedPayload = googleIdToken.split('.').getOrNull(1) ?: return@runCatching null
+        val payload = JSONObject(
+            String(Base64.decode(encodedPayload, Base64.URL_SAFE or Base64.NO_WRAP))
+        )
+        val name = payload.optString("name").trim()
+        if (name.isNotBlank()) name else listOf(
+            payload.optString("given_name").trim(),
+            payload.optString("family_name").trim(),
+        ).filter { it.isNotBlank() }.joinToString(" ").ifBlank { null }
+    }.getOrNull()
 
     private fun ensureFirebaseApp(): FirebaseApp {
         FirebaseApp.getApps(activity).firstOrNull()?.let { return it }

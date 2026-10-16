@@ -96,18 +96,29 @@ function api_auth_firebase(): never
     $firebaseUid = trim((string)($firebaseUser['localId'] ?? ''));
     $email = strtolower(trim((string)($firebaseUser['email'] ?? '')));
     $name = trim((string)($firebaseUser['displayName'] ?? ''));
-    // Firebase's top-level displayName can be empty even when the verified
-    // Google provider profile contains the person's name.
-    if ($name === '' || $name === 'Google User') {
-        foreach (($firebaseUser['providerUserInfo'] ?? []) as $provider) {
-            if (is_array($provider) && ($provider['providerId'] ?? '') === 'google.com') {
-                $providerName = trim((string)($provider['displayName'] ?? ''));
-                if ($providerName !== '') {
-                    $name = $providerName;
-                    break;
-                }
+    $hasGoogleProvider = false;
+    // Firebase sometimes omits Google's display name even after successful
+    // Google-to-Firebase sign-in. Prefer the verified Firebase provider name.
+    foreach (($firebaseUser['providerUserInfo'] ?? []) as $provider) {
+        if (is_array($provider) && ($provider['providerId'] ?? '') === 'google.com') {
+            $hasGoogleProvider = true;
+            $providerName = trim((string)($provider['displayName'] ?? ''));
+            if (($name === '' || $name === 'Google User')
+                && $providerName !== '' && $providerName !== 'Google User') {
+                $name = $providerName;
             }
         }
+    }
+
+    // A signed-in Android Google account also exposes its name directly to
+    // the app. Use that profile suggestion only after Firebase verifies the
+    // ID token and confirms this account has a Google provider. Names are
+    // user-editable profile data, never an authorization or identity proof.
+    $googleDisplayName = trim((string)($input['google_display_name'] ?? ''));
+    if (($name === '' || $name === 'Google User') && $hasGoogleProvider
+        && mb_strlen($googleDisplayName) >= 2 && mb_strlen($googleDisplayName) <= 100
+        && $googleDisplayName !== 'Google User') {
+        $name = $googleDisplayName;
     }
     $safeName = mb_substr($name !== '' ? $name : 'Google User', 0, 100);
 
