@@ -4,7 +4,7 @@ import android.app.Activity
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
@@ -19,11 +19,8 @@ class FirebaseGoogleSignIn(private val activity: Activity) {
         val webClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID.trim()
         require(webClientId.isNotEmpty()) { "Google SSO is not configured yet." }
 
-        val googleIdOption = GetGoogleIdOption.Builder()
-            .setServerClientId(webClientId)
-            .setFilterByAuthorizedAccounts(false)
-            .setAutoSelectEnabled(false)
-            .build()
+        // The user tapped a dedicated Google sign-in button.
+        val googleIdOption = GetSignInWithGoogleOption.Builder(webClientId).build()
 
         val request = GetCredentialRequest.Builder()
             .addCredentialOption(googleIdOption)
