@@ -1,9 +1,13 @@
 package za.co.hiddengems.app.auth
 
 import android.app.Activity
+import android.content.Intent
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialException
 import androidx.credentials.GetCredentialRequest
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.FirebaseApp
@@ -13,20 +17,28 @@ import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.tasks.await
 import za.co.hiddengems.app.BuildConfig
 
+class GoogleAccountReauthException(cause: Throwable) :
+    IllegalStateException("Google could not reauthenticate this account.", cause)
+
 class FirebaseGoogleSignIn(private val activity: Activity) {
     suspend fun signIn(): Result<String> = runCatching {
-        val app = ensureFirebaseApp()
-        val webClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID.trim()
-        require(webClientId.isNotEmpty()) { "Google SSO is not configured yet." }
-
-        // The user tapped a dedicated Google sign-in button.
-        val googleIdOption = GetSignInWithGoogleOption.Builder(webClientId).build()
-
+        ensureFirebaseApp()
+        val webClientId = webClientId()
         val request = GetCredentialRequest.Builder()
-            .addCredentialOption(googleIdOption)
+            .addCredentialOption(GetSignInWithGoogleOption.Builder(webClientId).build())
             .build()
 
-        val result = CredentialManager.create(activity).getCredential(activity, request)
+        val result = try {
+            CredentialManager.create(activity).getCredential(activity, request)
+        } catch (error: GetCredentialException) {
+            // Some Play services builds report a false cancellation after account selection.
+            // Only offer the alternate flow for this specific reauthentication error.
+            if (error.message?.contains("Account reauth failed", ignoreCase = true) == true) {
+                throw GoogleAccountReauthException(error)
+            }
+            throw error
+        }
+
         val credential = result.credential
         require(
             credential is CustomCredential &&
@@ -34,13 +46,46 @@ class FirebaseGoogleSignIn(private val activity: Activity) {
         ) { "Google did not return a valid credential." }
 
         val googleId = GoogleIdTokenCredential.createFrom(credential.data)
-        val firebaseCredential = GoogleAuthProvider.getCredential(googleId.idToken, null)
+        exchangeGoogleIdToken(googleId.idToken)
+    }
+
+    // Temporary compatibility fallback for Credential Manager's [16] reauth failure.
+    // GoogleSignInClient is deprecated; remove this when the upstream issue is resolved.
+    @Suppress("DEPRECATION")
+    fun alternateSignInIntent(): Intent {
+        val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(webClientId())
+            .requestEmail()
+            .build()
+        return GoogleSignIn.getClient(activity, options).signInIntent
+    }
+
+    @Suppress("DEPRECATION")
+    suspend fun finishAlternateSignIn(intent: Intent?): Result<String> = runCatching {
+        val account = GoogleSignIn.getSignedInAccountFromIntent(intent).await()
+        val idToken = account.idToken ?: error("Google did not provide an ID token.")
+        exchangeGoogleIdToken(idToken)
+    }
+
+    private fun webClientId(): String {
+        val id = BuildConfig.GOOGLE_WEB_CLIENT_ID.trim()
+        require(id.isNotEmpty() && id.endsWith(".apps.googleusercontent.com")) {
+            "Google Web Client ID is not configured correctly."
+        }
+        return id
+    }
+
+    private suspend fun exchangeGoogleIdToken(googleIdToken: String): String {
+        val app = ensureFirebaseApp()
         val auth = FirebaseAuth.getInstance(app)
-        val authResult = auth.signInWithCredential(firebaseCredential).await()
+        val authResult = auth.signInWithCredential(
+            GoogleAuthProvider.getCredential(googleIdToken, null)
+        ).await()
         val user = authResult.user ?: error("Firebase did not return a user.")
-        val idToken = user.getIdToken(true).await().token ?: error("Firebase did not return an ID token.")
+        val firebaseIdToken = user.getIdToken(true).await().token
+            ?: error("Firebase did not return an ID token.")
         auth.signOut()
-        idToken
+        return firebaseIdToken
     }
 
     private fun ensureFirebaseApp(): FirebaseApp {
