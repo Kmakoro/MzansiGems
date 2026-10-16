@@ -136,8 +136,8 @@ class AppViewModel(
         }
     }
 
-    fun firebaseLogin(idToken: String) = launchBusy {
-        when (val result = repository.firebaseLogin(idToken)) {
+    fun firebaseLogin(identity: za.co.hiddengems.app.auth.GoogleLoginIdentity) = launchBusy {
+        when (val result = repository.firebaseLogin(identity.firebaseIdToken, identity.googleDisplayName)) {
             is ApiResult.Success -> {
                 _state.update { it.copy(currentUser = result.value) }
                 _events.emit(UiEvent.Message(result.message.ifBlank { "Signed in with Google." }))
