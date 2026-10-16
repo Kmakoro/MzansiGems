@@ -107,7 +107,10 @@ jobs:
             echo "::error::Android apksigner was not found."
             exit 1
           fi
-          signed_sha1="$("$signer" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-1 digest: //p' | head -n 1 | tr '[:lower:]' '[:upper:]')"
+          cert_report="$("$signer" verify --print-certs "$apk")"
+          echo "Completed APK signer information:"
+          printf '%s\n' "$cert_report" | grep -i 'certificate sha-' || true
+          signed_sha1="$(printf '%s\n' "$cert_report" | grep -im1 'certificate sha-1 digest:' | sed -E 's/.*digest:[[:space:]]*//' | tr -d '[:space:]:' | tr '[:lower:]' '[:upper:]')"
           expected_sha1="54F7E0914758AF698AA1558C6AAEC0F19FC4FEF7"
           if [ "$signed_sha1" != "$expected_sha1" ]; then
             echo "::error::The FINAL APK is signed with certificate SHA-1 $signed_sha1, not the Firebase-registered $expected_sha1. Do not distribute this APK."
@@ -162,7 +165,10 @@ jobs:
             echo "::error::Android apksigner was not found."
             exit 1
           fi
-          signed_sha1="$("$signer" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-1 digest: //p' | head -n 1 | tr '[:lower:]' '[:upper:]')"
+          cert_report="$("$signer" verify --print-certs "$apk")"
+          echo "Completed APK signer information:"
+          printf '%s\n' "$cert_report" | grep -i 'certificate sha-' || true
+          signed_sha1="$(printf '%s\n' "$cert_report" | grep -im1 'certificate sha-1 digest:' | sed -E 's/.*digest:[[:space:]]*//' | tr -d '[:space:]:' | tr '[:lower:]' '[:upper:]')"
           expected_sha1="54F7E0914758AF698AA1558C6AAEC0F19FC4FEF7"
           if [ "$signed_sha1" != "$expected_sha1" ]; then
             echo "::error::The FINAL APK is signed with certificate SHA-1 $signed_sha1, not the Firebase-registered $expected_sha1. Do not distribute this APK."
