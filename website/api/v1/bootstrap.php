@@ -90,10 +90,23 @@ function api_method(): string
 
 function api_bearer_token(): ?string
 {
-    $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    // Apache rewrites and PHP-FPM deployments may expose the same header
+    // through different server variables. Never accept credentials via URL.
+    $header = '';
+    foreach (['HTTP_AUTHORIZATION', 'REDIRECT_HTTP_AUTHORIZATION'] as $key) {
+        $candidate = trim((string)($_SERVER[$key] ?? ''));
+        if ($candidate !== '') {
+            $header = $candidate;
+            break;
+        }
+    }
     if ($header === '' && function_exists('getallheaders')) {
-        $headers = getallheaders();
-        $header = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+        foreach (getallheaders() as $name => $value) {
+            if (strcasecmp((string)$name, 'Authorization') === 0) {
+                $header = (string)$value;
+                break;
+            }
+        }
     }
     if (preg_match('/^Bearer\s+(.+)$/i', trim((string)$header), $matches)) {
         return trim($matches[1]);

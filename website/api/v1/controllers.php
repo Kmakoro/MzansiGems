@@ -95,7 +95,21 @@ function api_auth_firebase(): never
     $firebaseUser = api_verify_firebase_id_token($idToken);
     $firebaseUid = trim((string)($firebaseUser['localId'] ?? ''));
     $email = strtolower(trim((string)($firebaseUser['email'] ?? '')));
-    $name = trim((string)($firebaseUser['displayName'] ?? 'Google User'));
+    $name = trim((string)($firebaseUser['displayName'] ?? ''));
+    // Firebase's top-level displayName can be empty even when the verified
+    // Google provider profile contains the person's name.
+    if ($name === '' || $name === 'Google User') {
+        foreach (($firebaseUser['providerUserInfo'] ?? []) as $provider) {
+            if (is_array($provider) && ($provider['providerId'] ?? '') === 'google.com') {
+                $providerName = trim((string)($provider['displayName'] ?? ''));
+                if ($providerName !== '') {
+                    $name = $providerName;
+                    break;
+                }
+            }
+        }
+    }
+    $safeName = mb_substr($name !== '' ? $name : 'Google User', 0, 100);
 
     if ($firebaseUid === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         api_error('Google sign-in did not return a usable account.', 401);
@@ -124,7 +138,6 @@ function api_auth_firebase(): never
             if (setting('allow_registration', '1') !== '1') {
                 api_error('New registrations are currently disabled.', 403);
             }
-            $safeName = mb_substr($name !== '' ? $name : 'Google User', 0, 100);
             $randomPassword = password_hash(bin2hex(random_bytes(32)), PASSWORD_DEFAULT);
             $stmt = db()->prepare(
                 'INSERT INTO users (full_name,email,firebase_uid,city,password_hash,email_verified_at) VALUES (?,?,?,?,?,NOW())'
@@ -141,6 +154,14 @@ function api_auth_firebase(): never
 
     if (!$user || $user['status'] !== 'active') {
         api_error('This account is suspended or unavailable.', 403);
+    }
+
+    // Repair only the placeholder from earlier Google registrations. Never
+    // overwrite a real name chosen by the account owner.
+    if ((string)$user['full_name'] === 'Google User' && $safeName !== 'Google User') {
+        db()->prepare("UPDATE users SET full_name = ? WHERE id = ? AND full_name = 'Google User'")
+            ->execute([$safeName, (int)$user['id']]);
+        $user['full_name'] = $safeName;
     }
 
     $token = api_issue_token((int)$user['id'], (string)($input['device_name'] ?? 'Mzansi Gem Android - Google'));

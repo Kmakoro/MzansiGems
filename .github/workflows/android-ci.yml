@@ -264,6 +264,24 @@ jobs:
             fi
           done
 
+      - name: Verify rewritten Apache Bearer authorization reaches PHP
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: hidden_gems
+          DB_USER: root
+          DB_PASS: root
+        run: |
+          php -r '
+            $_SERVER["REDIRECT_HTTP_AUTHORIZATION"] = "Bearer rewrite-test-token";
+            require "website/api/v1/bootstrap.php";
+            if (api_bearer_token() !== "rewrite-test-token") {
+              fwrite(STDERR, "FAILED: Apache rewritten Authorization header was not recognized.\n");
+              exit(1);
+            }
+            echo "PASS: Apache rewritten Authorization header\n";
+          '
+
       - name: Verify website and Android API use same database
         env:
           DB_HOST: 127.0.0.1
