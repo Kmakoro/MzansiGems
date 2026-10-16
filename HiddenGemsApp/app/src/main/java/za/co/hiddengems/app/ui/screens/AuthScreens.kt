@@ -70,6 +70,7 @@ import kotlinx.coroutines.launch
 import za.co.hiddengems.app.auth.AuthValidation
 import za.co.hiddengems.app.auth.FirebaseGoogleSignIn
 import za.co.hiddengems.app.auth.GoogleAccountReauthException
+import za.co.hiddengems.app.auth.GoogleLoginIdentity
 import za.co.hiddengems.app.ui.components.AppLogo
 import za.co.hiddengems.app.ui.theme.Orange
 import za.co.hiddengems.app.ui.theme.OrangeDark
@@ -83,7 +84,7 @@ fun LoginScreen(
     siteName: String,
     onBack: () -> Unit,
     onLogin: (String, String) -> Unit,
-    onFirebaseLogin: (String) -> Unit,
+    onFirebaseLogin: (GoogleLoginIdentity) -> Unit,
     onForgotPassword: (String) -> Unit,
     onResetPassword: (String, String) -> Unit,
     onDismissReset: () -> Unit,
