@@ -14,6 +14,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.tasks.await
 import za.co.hiddengems.app.BuildConfig
 
@@ -46,7 +47,7 @@ class FirebaseGoogleSignIn(private val activity: Activity) {
         ) { "Google did not return a valid credential." }
 
         val googleId = GoogleIdTokenCredential.createFrom(credential.data)
-        exchangeGoogleIdToken(googleId.idToken)
+        exchangeGoogleIdToken(googleId.idToken, googleId.displayName)
     }
 
     // Temporary compatibility fallback for Credential Manager's [16] reauth failure.
@@ -64,7 +65,7 @@ class FirebaseGoogleSignIn(private val activity: Activity) {
     suspend fun finishAlternateSignIn(intent: Intent?): Result<String> = runCatching {
         val account = GoogleSignIn.getSignedInAccountFromIntent(intent).await()
         val idToken = account.idToken ?: error("Google did not provide an ID token.")
-        exchangeGoogleIdToken(idToken)
+        exchangeGoogleIdToken(idToken, account.displayName)
     }
 
     private fun webClientId(): String {
@@ -75,13 +76,32 @@ class FirebaseGoogleSignIn(private val activity: Activity) {
         return id
     }
 
-    private suspend fun exchangeGoogleIdToken(googleIdToken: String): String {
+    private suspend fun exchangeGoogleIdToken(googleIdToken: String, googleDisplayName: String?): String {
         val app = ensureFirebaseApp()
         val auth = FirebaseAuth.getInstance(app)
         val authResult = auth.signInWithCredential(
             GoogleAuthProvider.getCredential(googleIdToken, null)
         ).await()
         val user = authResult.user ?: error("Firebase did not return a user.")
+
+        // Google's account chooser can return the verified Google display name
+        // even when Firebase creates a profile with a blank displayName.
+        // Populate only missing/placeholder Firebase names so our PHP API can
+        // repair the existing "Google User" database record on the next login.
+        // Never replace a customized Firebase profile name.
+        val name = googleDisplayName?.trim()?.takeIf {
+            it.length in 2..100 && it != "Google User"
+        }
+        if (name != null && (user.displayName.isNullOrBlank() || user.displayName == "Google User")) {
+            // Name synchronization is best-effort; authentication must still work
+            // if Firebase rejects this optional profile update.
+            runCatching {
+                user.updateProfile(
+                    UserProfileChangeRequest.Builder().setDisplayName(name).build()
+                ).await()
+            }
+        }
+
         val firebaseIdToken = user.getIdToken(true).await().token
             ?: error("Firebase did not return an ID token.")
         auth.signOut()
