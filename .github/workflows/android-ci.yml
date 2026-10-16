@@ -75,6 +75,16 @@ jobs:
             echo "::error::FIREBASE_PROJECT_ID does not match the Firebase project."
             exit 1
           fi
+          # Check only client ID structure, never expose the secrets in logs.
+          # The Firebase-managed Web OAuth client is separate from the website OAuth client.
+          case "$GOOGLE_WEB_CLIENT_ID" in
+            901968277520-gfn*.apps.googleusercontent.com) ;;
+            *) echo "::error::GOOGLE_WEB_CLIENT_ID must be the Firebase-managed Web SDK client for MzansiGems, not the Android or HelioHost website client."; exit 1 ;;
+          esac
+          case "$FIREBASE_APP_ID" in
+            1:901968277520:android:*) ;;
+            *) echo "::error::FIREBASE_APP_ID does not match the MzansiGems Android Firebase app."; exit 1 ;;
+          esac
 
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
