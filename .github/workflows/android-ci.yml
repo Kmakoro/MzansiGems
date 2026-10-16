@@ -60,6 +60,7 @@ jobs:
               exit 1
             fi
             echo "Firebase debug signing SHA-1 verified."
+            echo "MZANSI_DEBUG_KEYSTORE=$HOME/.android/debug.keystore" >> "$GITHUB_ENV"
           fi
 
       - name: Check Firebase configuration
@@ -94,6 +95,25 @@ jobs:
 
       - name: Build debug APK
         run: ./gradlew assembleDebug --no-daemon
+
+      - name: Verify signed debug APK matches Firebase Android OAuth client
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="app/build/outputs/apk/debug/app-debug.apk"
+          signer="$(find "${ANDROID_HOME}/build-tools" -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
+          if [ -z "$signer" ]; then
+            echo "::error::Android apksigner was not found."
+            exit 1
+          fi
+          signed_sha1="$("$signer" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-1 digest: //p' | head -n 1 | tr '[:lower:]' '[:upper:]')"
+          expected_sha1="54F7E0914758AF698AA1558C6AAEC0F19FC4FEF7"
+          if [ "$signed_sha1" != "$expected_sha1" ]; then
+            echo "::error::The FINAL APK is signed with certificate SHA-1 $signed_sha1, not the Firebase-registered $expected_sha1. Do not distribute this APK."
+            exit 1
+          fi
+          echo "Final APK signing SHA-1 matches Google Cloud / Firebase OAuth client."
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
@@ -130,6 +150,25 @@ jobs:
         env:
           PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
         run: ./gradlew assembleDebug -PAPI_BASE_URL="$PUBLIC_API_BASE_URL" --no-daemon
+
+      - name: Verify signed phone APK matches Firebase Android OAuth client
+        if: ${{ github.event_name != 'pull_request' && vars.PUBLIC_API_BASE_URL != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="app/build/outputs/apk/debug/app-debug.apk"
+          signer="$(find "${ANDROID_HOME}/build-tools" -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
+          if [ -z "$signer" ]; then
+            echo "::error::Android apksigner was not found."
+            exit 1
+          fi
+          signed_sha1="$("$signer" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-1 digest: //p' | head -n 1 | tr '[:lower:]' '[:upper:]')"
+          expected_sha1="54F7E0914758AF698AA1558C6AAEC0F19FC4FEF7"
+          if [ "$signed_sha1" != "$expected_sha1" ]; then
+            echo "::error::The FINAL APK is signed with certificate SHA-1 $signed_sha1, not the Firebase-registered $expected_sha1. Do not distribute this APK."
+            exit 1
+          fi
+          echo "Final APK signing SHA-1 matches Google Cloud / Firebase OAuth client."
 
       - name: Upload phone-ready APK
         if: ${{ github.event_name != 'pull_request' && vars.PUBLIC_API_BASE_URL != '' }}

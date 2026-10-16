@@ -42,6 +42,19 @@ android {
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", buildConfigString(configValue("GOOGLE_WEB_CLIENT_ID")))
     }
 
+    // CI must sign the *actual APK* with the Firebase-registered certificate.
+    // Local Android Studio builds keep their own default debug keystore.
+    signingConfigs {
+        getByName("debug") {
+            System.getenv("MZANSI_DEBUG_KEYSTORE")?.takeIf { it.isNotBlank() }?.let { path ->
+                storeFile = file(path)
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
