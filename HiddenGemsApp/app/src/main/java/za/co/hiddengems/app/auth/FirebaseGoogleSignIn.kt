@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
-import androidx.credentials.GetCredentialException
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.GetCredentialRequest
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
