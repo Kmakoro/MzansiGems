@@ -264,29 +264,84 @@ class AppViewModel(
         }
     }
 
+    // Toggling a saved gem changes persistent server state. Never assume that
+    // the toggle response has a non-null data object: older server versions can
+    // report success without a payload. Re-read the authoritative saved list.
+    private val saveRequestsInFlight = mutableSetOf<Int>()
+
     fun toggleSave(id: Int) {
         requireAuthThen {
+            // Prevent two rapid taps from sending a save and an unsave at once.
+            if (!saveRequestsInFlight.add(id)) return@requireAuthThen
+
             viewModelScope.launch {
-                when (val result = repository.toggleSave(id)) {
-                    is ApiResult.Success -> {
-                        _state.update { s ->
-                            val selected = s.selectedGem
-                            val nowSaved = result.value.isSaved
-                            val updatedSaved = s.savedGems.map { gem ->
-                                if (gem.id == id) gem.copy(isSaved = nowSaved ?: gem.isSaved, saveCount = result.value.saveCount ?: gem.saveCount) else gem
-                            }.let { list -> if (nowSaved == false) list.filterNot { it.id == id } else list }
-                            s.copy(
-                                selectedGem = if (selected?.id == id) selected.copy(
-                                    isSaved = nowSaved ?: selected.isSaved,
-                                    saveCount = result.value.saveCount ?: selected.saveCount,
-                                ) else selected,
-                                gems = s.gems.map { gem -> if (gem.id == id) gem.copy(isSaved = nowSaved ?: gem.isSaved, saveCount = result.value.saveCount ?: gem.saveCount) else gem },
-                                savedGems = updatedSaved,
-                            )
+                try {
+                    when (val toggle = repository.toggleSave(id)) {
+                        is ApiResult.Success -> {
+                            when (val saved = repository.saved()) {
+                                is ApiResult.Success -> {
+                                    val isSavedNow = saved.value.any { it.id == id }
+                                    _state.update { previous ->
+                                        fun updateGem(gem: Gem): Gem {
+                                            if (gem.id != id) return gem
+                                            val change = when {
+                                                gem.isSaved == isSavedNow -> 0
+                                                isSavedNow -> 1
+                                                else -> -1
+                                            }
+                                            return gem.copy(
+                                                isSaved = isSavedNow,
+                                                saveCount = (gem.saveCount + change).coerceAtLeast(0),
+                                            )
+                                        }
+
+                                        previous.copy(
+                                            selectedGem = previous.selectedGem?.let(::updateGem),
+                                            gems = previous.gems.map(::updateGem),
+                                            savedGems = saved.value,
+                                        )
+                                    }
+                                    _events.emit(UiEvent.Message(toggle.message.ifBlank {
+                                        if (isSavedNow) "Gem saved." else "Gem removed from saved list."
+                                    }))
+                                }
+                                is ApiResult.Error -> {
+                                    _events.emit(UiEvent.Message(
+                                        "The save request was processed, but the saved list could not be refreshed. Please open Saved to check."
+                                    ))
+                                }
+                            }
                         }
-                        _events.emit(UiEvent.Message(result.message))
+                        is ApiResult.Error -> {
+                            // The server might have completed the mutation before a response error.
+                            // Reconcile local state rather than encouraging a second blind toggle.
+                            val saved = repository.saved()
+                            if (saved is ApiResult.Success) {
+                                val isSavedNow = saved.value.any { it.id == id }
+                                _state.update { previous ->
+                                    previous.copy(
+                                        savedGems = saved.value,
+                                        selectedGem = previous.selectedGem?.let {
+                                            if (it.id == id) it.copy(isSaved = isSavedNow) else it
+                                        },
+                                        gems = previous.gems.map {
+                                            if (it.id == id) it.copy(isSaved = isSavedNow) else it
+                                        },
+                                    )
+                                }
+                            }
+                            _events.emit(UiEvent.Message(toggle.message))
+                        }
                     }
-                    is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
+                } catch (error: kotlinx.coroutines.CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    android.util.Log.e("MzansiGemSave", "Save/unsave failed for gem $id", error)
+                    _events.emit(UiEvent.Message(
+                        "Could not refresh this gem's saved status. Open Saved to check it before trying again."
+                    ))
+                } finally {
+                    saveRequestsInFlight.remove(id)
                 }
             }
         }
