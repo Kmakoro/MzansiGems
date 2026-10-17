@@ -1,6 +1,7 @@
 package za.co.hiddengems.app.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,10 +40,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import za.co.hiddengems.app.R
 import za.co.hiddengems.app.data.Gem
 import za.co.hiddengems.app.data.Review
 import za.co.hiddengems.app.ui.theme.Orange
@@ -66,18 +69,26 @@ fun LoadingOverlay(show: Boolean, content: @Composable () -> Unit) {
 @Composable
 fun AppLogo(siteName: String, modifier: Modifier = Modifier, showName: Boolean = true) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Brush.linearGradient(listOf(Orange, Peach))),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("◆", color = Color.White, fontWeight = FontWeight.Black)
-        }
+        Image(
+            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+            contentDescription = null,
+            modifier = Modifier.size(44.dp),
+        )
         if (showName) {
             Spacer(Modifier.width(10.dp))
-            Text(siteName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+            Text(
+                text = siteName.substringBefore(' ').ifBlank { "Mzansi" },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color(0xFF004C58),
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = siteName.substringAfter(' ', "Gems").let { if (it == "Gem") "Gems" else it },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color(0xFFFF632F),
+            )
         }
     }
 }
