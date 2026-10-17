@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.gms.common.api.ApiException
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,6 +57,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -67,6 +69,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import za.co.hiddengems.app.R
 import za.co.hiddengems.app.auth.AuthValidation
 import za.co.hiddengems.app.auth.FirebaseGoogleSignIn
 import za.co.hiddengems.app.auth.GoogleAccountReauthException
@@ -247,7 +250,15 @@ fun LoginScreen(
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("◉ Continue with Google")
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_google_g),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text("Continue with Google")
+                }
             }
         }
         

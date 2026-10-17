@@ -49,8 +49,7 @@ $pageTitle = 'Welcome back'; $bodyClass = 'auth-body'; require __DIR__ . '/inclu
         <div class="checkbox-row"><label><input type="checkbox" name="remember" value="1"> Remember me</label><a href="<?= url('forgot-password.php') ?>" style="color:var(--orange-dark);font-weight:700">Forgot password?</a></div>
         <button class="btn btn-primary btn-block" style="margin-top:16px" type="submit">Sign In</button>
     </form>
-    <div class="auth-separator">or</div><a class="google-btn" href="<?= url('google-auth.php') ?>">◉ Continue with Google</a>
+    <div class="auth-separator">or</div><a class="google-btn" href="<?= url('google-auth.php') ?>"><img src="<?= asset('images/google-g.svg') ?>" alt="" width="20" height="20"> Continue with Google</a>
     <p class="auth-foot">Don't have an account? <a href="<?= url('register.php') ?>">Sign up</a></p>
-    <p class="form-help" style="text-align:center">Demo: user@mzansigem.local / User@123</p>
 </div></div>
 <?php clear_old_input(); require __DIR__ . '/includes/footer.php'; ?>

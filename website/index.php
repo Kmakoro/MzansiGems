@@ -30,7 +30,7 @@ require __DIR__ . '/includes/header.php';
         <div class="section-head"><div><span class="eyebrow">Trending</span><h2>Trending Categories</h2></div></div>
         <div class="category-grid">
             <a class="category-card" href="<?= url('discover.php?vibe=Romantic') ?>"><span class="category-icon">♡</span><strong>Date Spots</strong></a>
-            <a class="category-card" href="<?= url('discover.php?activity=Food') ?>"><span class="category-icon">☕</span><strong>Food & Drinks</strong></a>
+            <a class="category-card" href="<?= url('discover.php?activity=Food') ?>"><span class="category-icon category-icon-food"><img src="<?= asset('images/food-drinks.svg') ?>" alt="" width="46" height="46"></span><strong>Food & Drinks</strong></a>
             <a class="category-card" href="<?= url('discover.php?activity=Fitness') ?>"><span class="category-icon">♟</span><strong>Fitness</strong></a>
             <a class="category-card" href="<?= url('discover.php?activity=Culture') ?>"><span class="category-icon">◉</span><strong>Culture</strong></a>
             <a class="category-card" href="<?= url('discover.php?activity=Nightlife') ?>"><span class="category-icon">◔</span><strong>Nightlife</strong></a>
