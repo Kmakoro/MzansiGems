@@ -19,3 +19,39 @@
 .google-btn:hover,.google-btn:focus-visible{border-color:#b5c3c7;box-shadow:0 3px 12px rgba(12,75,89,.10)}
 .category-icon-food{background:transparent;overflow:hidden}
 .category-icon-food img{width:46px;height:46px;object-fit:contain}
+
+/* Auth branding: keep Google G and text in one full-width accessible button. */
+.auth-card > a.google-btn {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  min-height: 50px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: #202124;
+  font-size: .94rem;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: none;
+}
+.auth-card > a.google-btn > img {
+  display: block;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  object-fit: contain;
+}
+.auth-card > a.google-btn > span {display: inline-block;}
+.auth-card > a.google-btn:focus-visible {
+  outline: 3px solid #0c4b59;
+  outline-offset: 3px;
+}

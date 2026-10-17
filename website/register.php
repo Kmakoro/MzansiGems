@@ -77,7 +77,7 @@ require __DIR__ . '/includes/header.php';
         <div class="form-group"><label for="confirm_password">Confirm Password</label><input class="form-control" id="confirm_password" name="confirm_password" type="password" placeholder="Confirm your password" required></div>
         <button class="btn btn-primary btn-block" type="submit">Create Account</button>
     </form>
-    <div class="auth-separator">or</div><a class="google-btn" href="<?= url('google-auth.php') ?>"><img src="<?= asset('images/google-g.svg') ?>" alt="" width="20" height="20"> Continue with Google</a>
+    <div class="auth-separator">or</div><a class="google-btn" href="<?= url('google-auth.php') ?>"><img src="<?= asset('images/google-g.svg') ?>" alt="" width="20" height="20"><span>Continue with Google</span></a>
     <p class="auth-foot">Already have an account? <a href="<?= url('login.php') ?>">Sign in</a></p>
 </div></div>
 <?php clear_old_input(); require __DIR__ . '/includes/footer.php'; ?>
