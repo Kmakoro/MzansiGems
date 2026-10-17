@@ -23,9 +23,9 @@ $flashes = pull_flashes();
 <body class="<?= e($bodyClass) ?>">
 <header class="site-header">
     <div class="container header-inner">
-        <a class="brand" href="<?= url('index.php') ?>" aria-label="Mzansi Gem home">
-            <span class="brand-mark"><i class="bi bi-compass-fill" aria-hidden="true"></i></span>
-            <span><?= e($siteName) ?></span>
+        <a class="brand" href="<?= url('index.php') ?>" aria-label="Mzansi Gems home">
+            <img class="brand-logo-icon" src="<?= asset('images/brand-icon.svg') ?>" alt="" width="38" height="38">
+            <span class="brand-wordmark">Mzansi <strong>Gems</strong></span>
         </a>
         <nav class="desktop-nav" aria-label="Primary navigation">
             <a href="<?= url('index.php') ?>"><i class="bi bi-house-door"></i> Home</a>
