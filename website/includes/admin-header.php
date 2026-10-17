@@ -21,7 +21,7 @@ $flashes = pull_flashes();
 <body class="admin-body">
 <div class="admin-shell">
     <aside class="admin-sidebar">
-        <a class="brand admin-brand" href="<?= url('admin/index.php') ?>"><span class="brand-mark"><i class="bi bi-compass-fill"></i></span><span>Admin Panel</span></a>
+        <a class="brand admin-brand" href="<?= url('admin/index.php') ?>"><img class="brand-logo-icon" src="<?= asset('images/brand-icon.svg') ?>" alt="" width="38" height="38"><span>Admin Panel</span></a>
         <nav>
             <a class="<?= $activeAdmin === 'dashboard' ? 'active' : '' ?>" href="<?= url('admin/index.php') ?>"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
             <a class="<?= $activeAdmin === 'users' ? 'active' : '' ?>" href="<?= url('admin/users.php') ?>"><i class="bi bi-people-fill"></i> User Management</a>
