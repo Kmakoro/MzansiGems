@@ -72,8 +72,8 @@ if (!$user) {
     $user = $stmt->fetch();
 }
 if ($user['status'] !== 'active') {
-    flash('danger', 'This account is suspended.');
-    redirect('login.php');
+    suspension_session_start((int)$user['id']);
+    redirect('suspension-appeal.php');
 }
 // Website and Android share the same users table. Repair the legacy Google
 // placeholder when the actual name comes from Google's verified userinfo.
