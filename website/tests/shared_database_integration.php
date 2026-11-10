@@ -195,6 +195,45 @@ $results = api_request('GET', $baseUrl . '/gems?city=' . urlencode($newCity));
 if (!in_array($gemId, array_column($results['data'] ?? [], 'id'), true)) fail_test('New city gem missing from Discover results.');
 echo "PASS: all South African cities can appear in categories and Discover\n";
 
+
+// Simulate a legacy account whose hashed password is "1234". The API must
+// block login, flag a mandatory reset, revoke bearer tokens and allow a
+// new strong password only through a valid single-use token.
+$userIdStmt = db()->prepare('SELECT id FROM users WHERE email = ?');
+$userIdStmt->execute([$testEmail]);
+$legacyUserId = (int)$userIdStmt->fetchColumn();
+db()->prepare('UPDATE users SET password_hash=?, password_reset_required=0 WHERE id=?')
+    ->execute([password_hash('1234', PASSWORD_DEFAULT), $legacyUserId]);
+expect_api_error('POST', $baseUrl . '/auth/login', [
+    'email' => $testEmail, 'password' => '1234',
+], 403);
+$flagStmt = db()->prepare('SELECT password_reset_required FROM users WHERE id=?');
+$flagStmt->execute([$legacyUserId]);
+if ((int)$flagStmt->fetchColumn() !== 1) fail_test('Legacy weak account was not marked for password reset.');
+$tokensStmt = db()->prepare('SELECT COUNT(*) FROM api_tokens WHERE user_id=?');
+$tokensStmt->execute([$legacyUserId]);
+if ((int)$tokensStmt->fetchColumn() !== 0) fail_test('Bearer tokens were not revoked for the weak account.');
+
+$resetToken = bin2hex(random_bytes(32));
+db()->prepare('INSERT INTO password_resets (user_id,token_hash,expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))')
+    ->execute([$legacyUserId, hash('sha256', $resetToken)]);
+expect_api_error('POST', $baseUrl . '/auth/reset-password', [
+    'token' => $resetToken, 'password' => '1234', 'confirm_password' => '1234',
+], 422);
+api_request('POST', $baseUrl . '/auth/reset-password', [
+    'token' => $resetToken, 'password' => $strongPassword, 'confirm_password' => $strongPassword,
+]);
+expect_api_error('POST', $baseUrl . '/auth/reset-password', [
+    'token' => $resetToken, 'password' => $strongPassword, 'confirm_password' => $strongPassword,
+], 400);
+$flagStmt->execute([$legacyUserId]);
+if ((int)$flagStmt->fetchColumn() !== 0) fail_test('Password reset did not unlock the account.');
+$afterResetLogin = api_request('POST', $baseUrl . '/auth/login', [
+    'email' => $testEmail, 'password' => $strongPassword,
+]);
+if (empty($afterResetLogin['data']['token'])) fail_test('Cannot sign in with strong password after reset.');
+echo "PASS: weak legacy account requires reset and strong single-use reset unlocks it\n";
+
 // Remove only the disposable test account and its related rows.
 db()->prepare('DELETE FROM users WHERE email=?')->execute([$testEmail]);
 echo "ALL SHARED DATABASE INTEGRATION TESTS PASSED\n";
