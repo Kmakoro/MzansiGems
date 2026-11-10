@@ -2,6 +2,8 @@ CREATE DATABASE IF NOT EXISTS hidden_gems CHARACTER SET utf8mb4 COLLATE utf8mb4_
 USE hidden_gems;
 
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS suspension_messages;
+DROP TABLE IF EXISTS suspension_cases;
 DROP TABLE IF EXISTS activity_log;
 DROP TABLE IF EXISTS reports;
 DROP TABLE IF EXISTS review_likes;
@@ -44,6 +46,32 @@ CREATE TABLE users (
     INDEX idx_users_role_status (role, status),
     INDEX idx_users_city (city)
 ) ENGINE=InnoDB;
+
+CREATE TABLE suspension_cases (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    reason VARCHAR(500) NOT NULL,
+    status ENUM('open','appealed','under_review','reinstated') NOT NULL DEFAULT 'open',
+    created_by INT UNSIGNED NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    resolved_at DATETIME NULL,
+    CONSTRAINT fk_suspension_case_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_suspension_case_admin FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_suspension_case_user (user_id, id),
+    INDEX idx_suspension_case_status (status, updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE suspension_messages (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    case_id BIGINT UNSIGNED NOT NULL,
+    sender_user_id INT UNSIGNED NULL,
+    message VARCHAR(2000) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_suspension_message_case FOREIGN KEY (case_id) REFERENCES suspension_cases(id) ON DELETE CASCADE,
+    CONSTRAINT fk_suspension_message_sender FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_suspension_messages_case (case_id, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE email_verification_tokens (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
