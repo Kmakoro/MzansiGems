@@ -325,7 +325,7 @@ fun RegisterScreen(
 ) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var city by remember(cities) { mutableStateOf(cities.firstOrNull() ?: "Cape Town") }
+    var city by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
@@ -350,13 +350,13 @@ fun RegisterScreen(
         ) {
             OutlinedTextField(
                 value = city,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("City") },
+                onValueChange = { city = it.take(100) },
+                readOnly = false,
+                label = { Text("City or town in South Africa") },
                 leadingIcon = { Icon(Icons.Default.LocationCity, null) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = cityExpanded) },
                 colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth()
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable, true).fillMaxWidth()
             )
             ExposedDropdownMenu(
                 expanded = cityExpanded,
