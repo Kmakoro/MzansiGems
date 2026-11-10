@@ -305,7 +305,7 @@ private fun AdminUsers(users: List<User>, onUpdate: (Int, String, String, String
             },
             confirmButton = {
                 Button(
-                    enabled = status != "suspended" || suspensionReason.isNotBlank(),
+                    enabled = status != "suspended" || suspensionReason.trim().length in 10..500,
                     onClick = { onUpdate(user.id, role, status, suspensionReason.trim()); editing = null }
                 ) { Text("Save") }
             },
