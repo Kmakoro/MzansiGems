@@ -12,14 +12,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Enter a valid email address.';
     if ($password === '') $errors[] = 'Enter your password.';
     if (!$errors) {
+        if (auth_login_rate_limited($email)) {
+            http_response_code(429);
+            $errors[] = 'Too many sign-in attempts for this account from this connection. Try again in 15 minutes or reset your password.';
+        } else {
         $stmt = db()->prepare('SELECT * FROM users WHERE email = ? LIMIT 1'); $stmt->execute([$email]); $user = $stmt->fetch();
         $legacyDemoEmail = legacy_demo_email_for($email);
         if (!$user && $legacyDemoEmail !== null) {
             $stmt->execute([$legacyDemoEmail]);
             $user = $stmt->fetch();
         }
-        if (!$user || !password_verify($password, $user['password_hash'])) $errors[] = 'The email address or password is incorrect.';
-        elseif ($user['status'] !== 'active') $errors[] = 'This account is suspended. Contact an administrator.';
+        if (!$user || !password_verify($password, (string)$user['password_hash'])) {
+            auth_record_login_failure($email);
+            $errors[] = 'The email address or password is incorrect.';
+        } else {
+        auth_clear_login_failures($email);
+        if ($user['status'] !== 'active') $errors[] = 'This account is suspended. Contact an administrator.';
+        elseif (!empty($user['must_reset_password']) || password_policy_error($password) !== null) {
+            auth_force_password_reset((int)$user['id']);
+            $errors[] = auth_reset_required_message();
+        }
         elseif (setting('require_email_verification', '0') === '1' && empty($user['email_verified_at'])) {
             $errors[] = 'Verify your email address before signing in.';
             $needsVerification = true;
@@ -35,6 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $target = $_SESSION['intended_url'] ?? url('profile.php'); unset($_SESSION['intended_url']);
             header('Location: ' . $target); exit;
         }
+        }
+        }
     }
 }
 $pageTitle = 'Welcome back'; $bodyClass = 'auth-body'; require __DIR__ . '/includes/header.php';
@@ -42,6 +56,7 @@ $pageTitle = 'Welcome back'; $bodyClass = 'auth-body'; require __DIR__ . '/inclu
 <div class="auth-shell"><div class="auth-card">
     <div class="auth-icon">♙</div><h1>Welcome Back!</h1><p class="muted">Sign in to discover places with Mzansi Gem</p>
     <?php if ($errors): ?><div class="toast toast-danger" style="position:static;margin-bottom:14px"><span><?= e(implode(' ', $errors)) ?></span></div><?php endif; ?>
+    <?php if (in_array(auth_reset_required_message(), $errors, true)): ?><a class="btn btn-ghost btn-block" style="margin-bottom:14px" href="<?= url('forgot-password.php') ?>">Reset password</a><?php endif; ?>
     <?php if ($needsVerification): ?><a class="btn btn-ghost btn-block" style="margin-bottom:14px" href="<?= url('resend-verification.php') ?>">Send a new verification link</a><?php endif; ?>
     <form method="post"><?= csrf_field() ?>
         <div class="form-group"><label for="email">Email Address</label><input class="form-control" id="email" name="email" type="email" value="<?= old('email') ?>" placeholder="you@example.com" required></div>
