@@ -96,3 +96,22 @@ Document changes since the prototype in README with links to commits/PR, archite
 - Final video link, PowerPoint, screenshots and app store/Play Console evidence.
 - Plesk domain logs, live mail and mobile-data verification.
 - Local device crash logs from Android Studio Logcat, if any crashes remain after updating the APK.
+
+
+## Hosting diagnostics captured from Plesk (10 November 2026; screenshots provided by group)
+
+These are **observations from live hosting logs**, not proof that the newly reviewed GitHub code is deployed or that a PHP coding bug caused the outage:
+
+- Apache: `mod_fcgid: can't apply process slot for /var/www/cgi-bin/cgi_wrapper/cgi_wrapper` with `share.php` as a referrer on 9 November. This is consistent with FastCGI capacity/process allocation pressure; host-side limits and process metrics are needed to distinguish global slot exhaustion, account CPU limits, stalled PHP requests and scheduled service restarts.
+- Apache: `(32) Broken pipe: mod_fcgid: ap_pass_brigade failed in handle_request_ipc function` with `admin/index.php`, `admin/moderation.php`, `share.php` and `discover.php` as referrers.
+- Nginx: repeated `connect() failed (111: Connection refused) while connecting to upstream` and `Connection reset by peer while SSL handshaking to upstream` at approximately 07:29 on 9 November; subsequent HTTP 200 traffic was visible.
+- Access: `GET /discover.php` returned an HTTP 500 near 12:59:59 on 10 November. This must be correlated with a detailed PHP/error or host process log; a nearby broken-pipe warning alone does not prove a particular code defect.
+- Most Apache entries found by searching `PHP` were ModSecurity blocks of scans seeking `phpinfo.php`, `.env`, `wp-config.php`, or other sensitive-looking files. These are not application fatal errors, and ModSecurity should not be disabled.
+
+Plesk's own support documentation describes `can't apply process slot` and intermittent 50x errors as potential FastCGI process-limit or CPU/resource problems. References:
+- https://support.plesk.com/hc/en-us/articles/12377590660119-Websites-and-ActiveSync-services-hosted-in-Plesk-are-loading-slowly-or-fail-to-load-with-a-50x-error-mod-fcgid-can-t-apply-process-slot-for-var-www-cgi-bin-cgi-wrapper-cgi-wrapper
+- https://support.plesk.com/hc/en-us/articles/12377274795927-Website-hosted-in-Plesk-server-is-not-accessible-under-heavy-load-mod-fcgid-can-t-apply-process-slot-for-var-www-cgi-bin-cgi-wrapper-cgi-wrapper
+
+**Hosting escalation:** Group should report the exact dates/messages to HelioHost Customer Service for Johnny, asking staff to inspect the FastCGI process pool, account CPU/resource throttling, PHP workers, upstream availability and restart records. They should not attempt root-level Apache configuration on a shared host.
+
+**Next safe deployment activity:** Full independent file/database backup in Plesk/phpMyAdmin; verify email service and real password-reset receipt; only then apply the additive migration and test staged deployment. Avoid running load tests against public shared hosting without permission.
