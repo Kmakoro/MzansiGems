@@ -24,14 +24,36 @@ $pageTitle='Content Moderation';$activeAdmin='moderation';require dirname(__DIR_
 <?php if ($tab === 'gems'): ?>
 <section class="section-tight" style="margin-top:28px">
   <div class="section-head"><div><span class="eyebrow">Manage live content</span><h2>Approved Gems — Edit Anytime</h2><p class="muted">Administrators can correct titles, city, location, budget, activity, photos and descriptions even after approval. Changes stay approved.</p></div></div>
-  <?php $approvedItems=db()->query("SELECT g.id,g.title,g.city,g.location,g.updated_at,u.full_name FROM gems g JOIN users u ON u.id=g.user_id WHERE g.status='approved' ORDER BY g.updated_at DESC LIMIT 100")->fetchAll(); ?>
+  <form method="get" class="filter-actions" style="margin:12px 0 16px">
+    <input type="hidden" name="tab" value="gems">
+    <label for="approved-search">Find an approved gem by name, city or location</label>
+    <input id="approved-search" class="form-control" name="approved_q" value="<?=e((string)($_GET['approved_q']??''))?>" placeholder="Search approved gems" maxlength="100">
+    <button class="btn btn-primary btn-sm" type="submit">Search</button>
+  </form>
+  <?php
+  $approvedSearch=trim((string)($_GET['approved_q']??''));
+  $approvedPage=max(1,(int)($_GET['approved_page']??1));
+  $approvedWhere="WHERE g.status='approved'";
+  $approvedParams=[];
+  if ($approvedSearch!=='') {
+      $approvedWhere.=" AND (g.title LIKE ? OR g.city LIKE ? OR g.location LIKE ?)";
+      $approvedParams=array_fill(0,3,'%'.$approvedSearch.'%');
+  }
+  $approvedCount=db()->prepare("SELECT COUNT(*) FROM gems g ".$approvedWhere);
+  $approvedCount->execute($approvedParams);
+  $approvedTotal=(int)$approvedCount->fetchColumn();
+  $approvedOffset=($approvedPage-1)*30;
+  $approvedQuery=db()->prepare("SELECT g.id,g.title,g.city,g.location,g.updated_at,u.full_name FROM gems g JOIN users u ON u.id=g.user_id ".$approvedWhere." ORDER BY g.updated_at DESC LIMIT 30 OFFSET ".$approvedOffset);
+  $approvedQuery->execute($approvedParams);
+  $approvedItems=$approvedQuery->fetchAll();
+  ?>
   <div class="table-wrap"><table class="data-table"><thead><tr><th>Gem</th><th>City</th><th>Contributor</th><th>Last Updated</th><th>Action</th></tr></thead><tbody>
     <?php if (!$approvedItems): ?><tr><td colspan="5">No approved gems yet.</td></tr><?php endif; ?>
     <?php foreach ($approvedItems as $approved): ?>
       <tr><td><strong><?=e($approved['title'])?></strong><br><small><?=e($approved['location'])?></small></td><td><?=e($approved['city'])?></td><td><?=e($approved['full_name'])?></td><td><?=e(date('Y-m-d',strtotime($approved['updated_at'])))?></td><td><a class="btn btn-primary btn-sm" href="<?=url('edit-gem.php?id='.(int)$approved['id'])?>">Edit Approved Gem</a></td></tr>
     <?php endforeach; ?>
   </tbody></table></div>
-  <p class="form-help">Showing the 100 most recently updated approved gems.</p>
+  <div class="filter-actions"><span class="result-count">Showing <?=count($approvedItems)?> of <?=$approvedTotal?> approved gems</span><div class="action-row"><?php if($approvedPage>1):?><a class="btn btn-ghost btn-sm" href="<?=url('admin/moderation.php?tab=gems&approved_page='.($approvedPage-1).'&approved_q='.urlencode($approvedSearch))?>">Previous page</a><?php endif;?><?php if($approvedOffset+30<$approvedTotal):?><a class="btn btn-ghost btn-sm" href="<?=url('admin/moderation.php?tab=gems&approved_page='.($approvedPage+1).'&approved_q='.urlencode($approvedSearch))?>">Next page</a><?php endif;?></div></div>
 </section>
 <?php endif; ?>
 <?php require dirname(__DIR__).'/includes/admin-footer.php'; ?>
