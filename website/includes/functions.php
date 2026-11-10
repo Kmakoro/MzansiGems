@@ -254,6 +254,23 @@ function gem_image_url(array $gem, ?array $images = null): string
     return asset('images/gem-placeholder.svg');
 }
 
+/**
+ * City suggestions include existing approved gems, so new South African
+ * towns appear as soon as a gem is approved. Free-text entry stays possible.
+ */
+function discoverable_cities(): array
+{
+    $core = ['Cape Town','Johannesburg','Durban','Pretoria','Gqeberha','Bloemfontein',
+        'Polokwane','Mbombela','East London','Kimberley','Soweto','Pietermaritzburg',
+        'Rustenburg','Mahikeng','Mthatha','George','Stellenbosch','Paarl','Knysna',
+        'Nelspruit','Vereeniging','Welkom','Middelburg','Richards Bay','Thohoyandou',
+        'Tzaneen','Upington','Klerksdorp','Potchefstroom','Hermanus','Mossel Bay'];
+    $rows = db()->query("SELECT DISTINCT TRIM(city) AS city FROM gems WHERE status='approved' AND city <> ''")->fetchAll(PDO::FETCH_COLUMN);
+    $cities = array_values(array_unique(array_merge($core, array_map('trim', $rows))));
+    sort($cities, SORT_NATURAL | SORT_FLAG_CASE);
+    return $cities;
+}
+
 function tag_list(?string $csv): array
 {
     if (!$csv) {
