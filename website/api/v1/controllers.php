@@ -24,6 +24,9 @@ function api_auth_register(): never
     if ($errors !== []) api_error('Please correct the highlighted fields.', 422, $errors);
 
     $requiresVerification = setting('require_email_verification', '0') === '1';
+    if ($requiresVerification && !filter_var(MAIL_FROM, FILTER_VALIDATE_EMAIL)) {
+        api_error('Email verification is temporarily unavailable. Please try again later.', 503);
+    }
     $stmt = db()->prepare('INSERT INTO users (full_name,email,city,password_hash,email_verified_at) VALUES (?,?,?,?,?)');
     $stmt->execute([$name, $email, $city, password_hash($password, PASSWORD_DEFAULT), $requiresVerification ? null : date('Y-m-d H:i:s')]);
     $userId = (int)db()->lastInsertId();
