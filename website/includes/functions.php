@@ -184,19 +184,59 @@ function logout_user(): void
     session_destroy();
 }
 
+/**
+ * Send transactional emails through an authenticated provider when configured;
+ * otherwise use HelioHost's PHP mail transport. Never log message bodies,
+ * verification tokens or password-reset links.
+ */
 function send_app_email(string $to, string $subject, string $body): bool
 {
-    if (MAIL_FROM === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL) || !filter_var(MAIL_FROM, FILTER_VALIDATE_EMAIL)) {
+        error_log('MzansiGems mail not configured: valid MAIL_FROM address required.');
         return false;
     }
+
+    if (BREVO_API_KEY !== '') {
+        if (!function_exists('curl_init')) {
+            error_log('MzansiGems mail transport unavailable: PHP cURL extension missing.');
+            return false;
+        }
+        $payload = json_encode([
+            'sender' => ['email' => MAIL_FROM, 'name' => APP_NAME],
+            'to' => [['email' => $to]],
+            'subject' => $subject,
+            'textContent' => $body,
+        ], JSON_THROW_ON_ERROR);
+        $ch = curl_init('https://api.brevo.com/v3/smtp/email');
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 4,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Accept: application/json',
+                'api-key: ' . BREVO_API_KEY,
+            ],
+        ]);
+        curl_exec($ch);
+        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($status >= 200 && $status < 300) return true;
+        error_log('MzansiGems mail provider rejected a message (HTTP ' . $status . ').');
+        return false;
+    }
+
     $headers = [
         'From: ' . MAIL_FROM,
         'Reply-To: ' . MAIL_FROM,
+        'MIME-Version: 1.0',
         'Content-Type: text/plain; charset=UTF-8',
-        'X-Mailer: PHP/' . PHP_VERSION,
     ];
-    return @mail($to, $subject, $body, implode("
-", $headers));
+    $sent = @mail($to, $subject, $body, implode("\r\n", $headers));
+    if (!$sent) error_log('MzansiGems PHP mail transport failed.');
+    return $sent;
 }
 
 function legacy_demo_email_for(string $email): ?string
