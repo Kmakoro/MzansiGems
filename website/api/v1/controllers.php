@@ -28,7 +28,7 @@ function api_auth_register(): never
     $stmt->execute([$name, $email, $city, password_hash($password, PASSWORD_DEFAULT), $requiresVerification ? null : date('Y-m-d H:i:s')]);
     $userId = (int)db()->lastInsertId();
     record_activity($userId, 'user_joined', $name . ' joined the community.');
-    $stmt = db()->prepare('SELECT id,full_name,email,city,bio,role,status,level,points,password_hash,email_verified_at,notify_new_gems,notify_comments,notify_likes_saves,personalized_recommendations,show_saved_gems,show_activity_status,created_at,updated_at FROM users WHERE id = ?');
+    $stmt = db()->prepare('SELECT id,full_name,email,city,bio,role,status,level,points,password_hash,password_reset_required,email_verified_at,notify_new_gems,notify_comments,notify_likes_saves,personalized_recommendations,show_saved_gems,show_activity_status,created_at,updated_at FROM users WHERE id = ?');
     $stmt->execute([$userId]);
     $user = $stmt->fetch();
 
@@ -77,7 +77,7 @@ function api_auth_login(): never
     }
     login_throttle_success($email);
     error_log('MzansiGems auth_login outcome=verified elapsed_ms=' . round((microtime(true) - $loginStartedAt) * 1000));
-    if (password_upgrade_required($password)) {
+    if (password_upgrade_required($password) || (int)($user['password_reset_required'] ?? 0) === 1) {
         revoke_weak_password_sessions((int)$user['id']);
         api_error('Your password no longer meets our security requirements. Please use Forgot password to reset it before signing in.', 403, ['code' => 'PASSWORD_RESET_REQUIRED']);
     }
@@ -299,7 +299,7 @@ function api_auth_reset_password(): never
     $userId = (int)$record['user_id'];
     db()->beginTransaction();
     try {
-        db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?')->execute([password_hash($password, PASSWORD_DEFAULT), $userId]);
+        db()->prepare('UPDATE users SET password_hash = ?, password_reset_required = 0 WHERE id = ?')->execute([password_hash($password, PASSWORD_DEFAULT), $userId]);
         db()->prepare('UPDATE password_resets SET used_at = NOW() WHERE id = ?')->execute([(int)$record['id']]);
         revoke_weak_password_sessions($userId);
         db()->commit();
