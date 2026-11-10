@@ -39,6 +39,24 @@ function api_request(string $method, string $url, ?array $json = null, ?string $
     return $decoded;
 }
 
+function expect_api_error(string $method, string $url, array $json, int $expectedStatus): void {
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_CUSTOMREQUEST => $method,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Accept: application/json'],
+        CURLOPT_POSTFIELDS => json_encode($json, JSON_THROW_ON_ERROR),
+        CURLOPT_TIMEOUT => 20,
+    ]);
+    $body = curl_exec($ch);
+    $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    $decoded = is_string($body) ? json_decode($body, true) : null;
+    if ($status !== $expectedStatus || !is_array($decoded) || ($decoded['success'] ?? true) !== false) {
+        fail_test('Expected HTTP ' . $expectedStatus . ' JSON error, received HTTP ' . $status . '.');
+    }
+}
+
 $health = api_request('GET', $baseUrl . '/health');
 if (($health['data']['status'] ?? '') !== 'healthy') fail_test('Health endpoint is not healthy.');
 echo "PASS: API health\n";
@@ -49,6 +67,20 @@ if (!in_array((string)parse_url($baseUrl, PHP_URL_HOST), ['localhost', '127.0.0.
 }
 $testEmail = 'mzansi-ci-' . bin2hex(random_bytes(5)) . '@example.test';
 $strongPassword = 'MzansiCI_Reliable_2026!';
+expect_api_error('POST', $baseUrl . '/auth/register', [
+    'full_name' => 'Test User',
+    'email' => 'invalid-password@example.test',
+    'city' => 'Johannesburg',
+    'password' => '1234',
+    'confirm_password' => '1234',
+], 422);
+expect_api_error('POST', $baseUrl . '/auth/reset-password', [
+    'token' => 'not-a-valid-token',
+    'password' => '1234',
+    'confirm_password' => '1234',
+], 422);
+echo "PASS: weak passwords rejected by API registration and reset endpoints\n";
+
 $login = api_request('POST', $baseUrl . '/auth/register', [
     'full_name' => 'Thabo Mkhize',
     'email' => $testEmail,
@@ -59,6 +91,22 @@ $login = api_request('POST', $baseUrl . '/auth/register', [
 $token = (string)($login['data']['token'] ?? '');
 if ($token === '') fail_test('Login did not return a bearer token.');
 echo "PASS: strong-password API registration\n";
+$guessEmail = 'bad-guesses-' . bin2hex(random_bytes(5)) . '@example.test';
+for ($attempt = 0; $attempt < 8; $attempt++) {
+    expect_api_error('POST', $baseUrl . '/auth/login', [
+        'email' => $guessEmail, 'password' => 'wrong-password',
+    ], 401);
+}
+expect_api_error('POST', $baseUrl . '/auth/login', [
+    'email' => $guessEmail, 'password' => 'wrong-password',
+], 429);
+// An independent account can authenticate despite the throttled guessed email.
+$anotherLogin = api_request('POST', $baseUrl . '/auth/login', [
+    'email' => $testEmail, 'password' => $strongPassword,
+]);
+if (empty($anotherLogin['data']['token'])) fail_test('Valid independent login failed during throttling.');
+echo "PASS: repeated guesses throttled while another account logs in\n";
+
 
 $me = api_request('GET', $baseUrl . '/auth/me', null, $token);
 if (($me['data']['email'] ?? '') !== $testEmail) fail_test('Authenticated user mismatch.');
