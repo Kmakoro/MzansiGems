@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS gem_images;
 DROP TABLE IF EXISTS gems;
 DROP TABLE IF EXISTS password_resets;
+DROP TABLE IF EXISTS auth_login_attempts;
 DROP TABLE IF EXISTS email_verification_tokens;
 DROP TABLE IF EXISTS api_tokens;
 DROP TABLE IF EXISTS remember_tokens;
@@ -88,6 +89,13 @@ CREATE TABLE password_resets (
     CONSTRAINT fk_reset_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_reset_token (token_hash),
     INDEX idx_reset_expiry (expires_at)
+) ENGINE=InnoDB;
+
+CREATE TABLE auth_login_attempts (
+    attempt_key CHAR(64) NOT NULL PRIMARY KEY,
+    failures INT UNSIGNED NOT NULL DEFAULT 0,
+    window_start DATETIME NOT NULL,
+    INDEX idx_auth_login_attempts_window (window_start)
 ) ENGINE=InnoDB;
 
 CREATE TABLE gems (
