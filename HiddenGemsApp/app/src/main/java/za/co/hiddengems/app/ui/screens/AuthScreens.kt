@@ -1,6 +1,8 @@
 package za.co.hiddengems.app.ui.screens
 
 import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.gms.common.api.ApiException
@@ -84,6 +86,8 @@ fun LoginScreen(
     busy: Boolean,
     serverOnline: Boolean?,
     resetToken: String?,
+    suspensionNotice: String?,
+    suspensionAppealUrl: String?,
     siteName: String,
     onBack: () -> Unit,
     onLogin: (String, String) -> Unit,
@@ -91,6 +95,7 @@ fun LoginScreen(
     onForgotPassword: (String) -> Unit,
     onResetPassword: (String, String) -> Unit,
     onDismissReset: () -> Unit,
+    onDismissSuspension: () -> Unit,
     onRegister: () -> Unit,
 ) {
     var email by remember { mutableStateOf("") }
@@ -279,6 +284,34 @@ fun LoginScreen(
                 )
             }
         }
+    }
+
+    if (suspensionNotice != null) {
+        AlertDialog(
+            onDismissRequest = onDismissSuspension,
+            title = { Text("Account suspended") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text(suspensionNotice, style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(10.dp))
+                    Text("You can appeal securely on the MzansiGems website. Normal account actions remain unavailable until a moderator reinstates your account.")
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val siteUrl = suspensionAppealUrl?.takeIf {
+                        it.startsWith("https://vutivivukeya544.helioho.st/")
+                    } ?: "https://vutivivukeya544.helioho.st/login.php"
+                    runCatching {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(siteUrl)))
+                    }.onFailure {
+                        localError = "Could not open the browser. Visit the MzansiGems website to appeal."
+                    }
+                    onDismissSuspension()
+                }) { Text("Appeal on website") }
+            },
+            dismissButton = { TextButton(onClick = onDismissSuspension) { Text("Close") } },
+        )
     }
 
     if (showForgotPassword) {
