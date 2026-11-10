@@ -25,11 +25,16 @@ function password_upgrade_required(string $password): bool
     return password_policy_error($password) !== null;
 }
 
+function revoke_password_sessions(int $userId): void
+{
+    db()->prepare('DELETE FROM api_tokens WHERE user_id = ?')->execute([$userId]);
+    db()->prepare('DELETE FROM remember_tokens WHERE user_id = ?')->execute([$userId]);
+}
+
 function revoke_weak_password_sessions(int $userId): void
 {
     db()->prepare('UPDATE users SET password_reset_required = 1 WHERE id = ?')->execute([$userId]);
-    db()->prepare('DELETE FROM api_tokens WHERE user_id = ?')->execute([$userId]);
-    db()->prepare('DELETE FROM remember_tokens WHERE user_id = ?')->execute([$userId]);
+    revoke_password_sessions($userId);
 }
 
 /**
