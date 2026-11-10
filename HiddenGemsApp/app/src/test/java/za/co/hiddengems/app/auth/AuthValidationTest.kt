@@ -20,7 +20,7 @@ class AuthValidationTest {
     @Test fun validRegistrationHasNoError() {
         assertNull(
             AuthValidation.registrationError(
-                "Thandi Ndlovu", "thandi@example.com", "Johannesburg", "Password123", "Password123"
+                "Thandi Ndlovu", "thandi@example.com", "Johannesburg", "MySaferPassword2026!", "MySaferPassword2026!"
             )
         )
     }
@@ -36,7 +36,7 @@ class AuthValidationTest {
         assertEquals(
             "Passwords do not match.",
             AuthValidation.registrationError(
-                "Thandi Ndlovu", "thandi@example.com", "Johannesburg", "Password123", "Password321"
+                "Thandi Ndlovu", "thandi@example.com", "Johannesburg", "MySaferPassword2026!", "DifferentSaferPassword2026!"
             )
         )
     }
