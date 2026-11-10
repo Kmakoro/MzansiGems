@@ -830,7 +830,13 @@ function api_admin_users(): never
     if (in_array($status, ['active','suspended'], true)) { $where[] = 'status=?'; $params[] = $status; }
     $stmt = db()->prepare('SELECT id,full_name,email,city,bio,role,status,level,points,email_verified_at,notify_new_gems,notify_comments,notify_likes_saves,personalized_recommendations,show_saved_gems,show_activity_status,created_at,updated_at FROM users WHERE ' . implode(' AND ', $where) . ' ORDER BY created_at DESC');
     $stmt->execute($params);
-    api_response(array_map('api_public_user', $stmt->fetchAll()));
+    $results = [];
+    foreach ($stmt->fetchAll() as $member) {
+        $row = api_public_user($member);
+        $row['suspension_reason'] = $member['status'] === 'suspended' ? suspension_reason_for((int)$member['id']) : '';
+        $results[] = $row;
+    }
+    api_response($results);
 }
 
 function api_admin_user_update(int $id): never
@@ -848,7 +854,9 @@ function api_admin_user_update(int $id): never
     }
     $stmt = db()->prepare('SELECT id,full_name,email,city,bio,role,status,level,points,email_verified_at,notify_new_gems,notify_comments,notify_likes_saves,personalized_recommendations,show_saved_gems,show_activity_status,created_at,updated_at FROM users WHERE id=?'); $stmt->execute([$id]);
     $user = $stmt->fetch(); if (!$user) api_error('User not found.', 404);
-    api_response(api_public_user($user), 'User updated.');
+    $result = api_public_user($user);
+    $result['suspension_reason'] = $user['status'] === 'suspended' ? suspension_reason_for((int)$user['id']) : '';
+    api_response($result, 'User updated.');
 }
 
 function api_admin_moderation(): never
