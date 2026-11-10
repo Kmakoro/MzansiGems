@@ -130,6 +130,8 @@ function login_user(array $user, bool $remember = false): void
 {
     session_regenerate_id(true);
     $_SESSION['user_id'] = (int)$user['id'];
+    // An active session must never retain another account's appeal identity.
+    unset($_SESSION['suspension_user_id'], $_SESSION['suspension_authenticated_at']);
 
     if ($remember) {
         $selector = bin2hex(random_bytes(8));
