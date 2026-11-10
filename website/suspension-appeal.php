@@ -42,6 +42,10 @@ if (!$case) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
+    if (($_POST['action'] ?? '') === 'signout') {
+        logout_user();
+        redirect('login.php');
+    }
     try {
         suspension_add_message((int)$case['id'], (int)$member['id'], (string)($_POST['message'] ?? ''), false);
         flash('success', 'Your message has been sent to the moderation team.');
@@ -97,6 +101,10 @@ require __DIR__ . '/includes/header.php';
             <button type="submit" class="btn btn-primary">Send message / appeal</button>
         </form>
     </section>
-    <p style="text-align:center"><a href="<?= url('login.php') ?>">Back to sign in</a></p>
+    <form method="post" style="text-align:center">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="signout">
+        <button class="btn btn-ghost" type="submit">Sign out of appeal session</button>
+    </form>
 </main>
 <?php require __DIR__ . '/includes/footer.php'; ?>
