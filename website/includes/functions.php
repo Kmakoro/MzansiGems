@@ -196,6 +196,51 @@ function send_app_email(string $to, string $subject, string $body): bool
         return false;
     }
 
+    // Use the same authenticated SMTP transport already verified from
+    // the Plesk mailbox in Apple Mail. Secrets must stay in hosting settings,
+    // never in the repository or browser-accessible diagnostics.
+    $smtpHost = trim((string)(getenv('SMTP_HOST') ?: ''));
+    if ($smtpHost !== '') {
+        $smtpUsername = (string)(getenv('SMTP_USERNAME') ?: '');
+        $smtpPassword = (string)(getenv('SMTP_PASSWORD') ?: '');
+        $smtpPort = (int)(getenv('SMTP_PORT') ?: 465);
+        if ($smtpUsername === '' || $smtpPassword === '' || $smtpPort < 1 || $smtpPort > 65535) {
+            error_log('MzansiGems SMTP setup incomplete: username, password or port missing.');
+            return false;
+        }
+        $autoload = dirname(__DIR__) . '/vendor/autoload.php';
+        if (!is_file($autoload)) {
+            error_log('MzansiGems SMTP requires Composer PHPMailer dependency in website/vendor.');
+            return false;
+        }
+        require_once $autoload;
+        try {
+            $mailer = new \PHPMailer\PHPMailer\PHPMailer(true);
+            $mailer->isSMTP();
+            $mailer->Host = $smtpHost;
+            $mailer->Port = $smtpPort;
+            $mailer->SMTPAuth = true;
+            $mailer->Username = $smtpUsername;
+            $mailer->Password = $smtpPassword;
+            $mailer->SMTPSecure = $smtpPort === 465
+                ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
+                : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mailer->Timeout = 10;
+            $mailer->SMTPDebug = 0;
+            $mailer->CharSet = 'UTF-8';
+            $mailer->setFrom(MAIL_FROM, APP_NAME);
+            $mailer->addAddress($to);
+            $mailer->Subject = $subject;
+            $mailer->Body = $body;
+            $mailer->isHTML(false);
+            return $mailer->send();
+        } catch (\Throwable $error) {
+            // No exception text: server responses can include sensitive details.
+            error_log('MzansiGems authenticated SMTP dispatch failed.');
+            return false;
+        }
+    }
+
     if (BREVO_API_KEY !== '') {
         if (!function_exists('curl_init')) {
             error_log('MzansiGems mail transport unavailable: PHP cURL extension missing.');
