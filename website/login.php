@@ -12,24 +12,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Enter a valid email address.';
     if ($password === '') $errors[] = 'Enter your password.';
     if (!$errors) {
+        if (login_throttle_blocked($email)) {
+            $errors[] = 'Too many sign-in attempts. Please try again in 15 minutes.';
+        } else {
+        $loginStartedAt = microtime(true);
         $stmt = db()->prepare('SELECT * FROM users WHERE email = ? LIMIT 1'); $stmt->execute([$email]); $user = $stmt->fetch();
         $legacyDemoEmail = legacy_demo_email_for($email);
         if (!$user && $legacyDemoEmail !== null) {
             $stmt->execute([$legacyDemoEmail]);
             $user = $stmt->fetch();
         }
-        if (!$user || !password_verify($password, $user['password_hash'])) $errors[] = 'The email address or password is incorrect.';
-        elseif (password_upgrade_required($password)) {
+        if (!$user || !password_verify($password, $user['password_hash'])) {
+            login_throttle_fail($email);
+            error_log('MzansiGems website_login outcome=failure elapsed_ms=' . round((microtime(true) - $loginStartedAt) * 1000));
+            $errors[] = 'The email address or password is incorrect.';
+        }
+        else {
+            login_throttle_success($email);
+            error_log('MzansiGems website_login outcome=verified elapsed_ms=' . round((microtime(true) - $loginStartedAt) * 1000));
+        }
+        if (!$errors && password_upgrade_required($password)) {
+
             revoke_weak_password_sessions((int)$user['id']);
             $errors[] = 'Your password no longer meets our security requirements. Please use Forgot password to reset it before signing in.';
         }
-        elseif ($user['status'] !== 'active') $errors[] = 'This account is suspended. Contact an administrator.';
-        elseif (setting('require_email_verification', '0') === '1' && empty($user['email_verified_at'])) {
+        elseif (!$errors && $user['status'] !== 'active') $errors[] = 'This account is suspended. Contact an administrator.';
+        elseif (!$errors && setting('require_email_verification', '0') === '1' && empty($user['email_verified_at'])) {
             $errors[] = 'Verify your email address before signing in.';
             $needsVerification = true;
             $_SESSION['verification_email'] = $email;
         }
-        else {
+        elseif (!$errors) {
             if ($legacyDemoEmail !== null && $user['email'] === $legacyDemoEmail) {
                 $upgrade = db()->prepare('UPDATE IGNORE users SET email = ? WHERE id = ?');
                 $upgrade->execute([$email, (int)$user['id']]);
@@ -38,6 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             login_user($user, isset($_POST['remember'])); clear_old_input();
             $target = $_SESSION['intended_url'] ?? url('profile.php'); unset($_SESSION['intended_url']);
             header('Location: ' . $target); exit;
+        }
         }
     }
 }
