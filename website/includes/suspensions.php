@@ -119,14 +119,22 @@ function suspension_add_message(int $caseId, int $senderId, string $body, bool $
         $case = $stmt->fetch();
         if (!$case || $case['status'] === 'reinstated') throw new DomainException('This appeal case is closed.');
         if (!$isAdmin && (int)$case['user_id'] !== $senderId) throw new DomainException('Access denied.');
+        if ($isAdmin) {
+            $auth = $pdo->prepare('SELECT role,status FROM users WHERE id=?');
+            $auth->execute([$senderId]);
+            $admin = $auth->fetch();
+            if (!$admin || $admin['role'] !== 'admin' || $admin['status'] !== 'active') {
+                throw new DomainException('Administrator access is required.');
+            }
+        }
 
         if (!$isAdmin) {
             $stmt = $pdo->prepare('SELECT COUNT(*) FROM suspension_messages WHERE case_id = ? AND sender_user_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)');
             $stmt->execute([$caseId, $senderId]);
             if ((int)$stmt->fetchColumn() >= 6) throw new DomainException('You have reached the message limit. Please try again later.');
         }
-        $pdo->prepare('INSERT INTO suspension_messages (case_id,sender_user_id,message) VALUES (?,?,?)')
-            ->execute([$caseId, $senderId, $body]);
+        $pdo->prepare('INSERT INTO suspension_messages (case_id,sender_user_id,sender_kind,message) VALUES (?,?,?,?)')
+            ->execute([$caseId, $senderId, $isAdmin ? 'admin' : 'member', $body]);
         $nextStatus = $isAdmin ? 'under_review' : 'appealed';
         $pdo->prepare('UPDATE suspension_cases SET status = ? WHERE id = ?')->execute([$nextStatus, $caseId]);
         $pdo->commit();
@@ -138,8 +146,8 @@ function suspension_add_message(int $caseId, int $senderId, string $body, bool $
 
 function suspension_messages_for(int $caseId): array
 {
-    $stmt = db()->prepare("SELECT m.message,m.created_at,u.full_name,u.role
-        FROM suspension_messages m LEFT JOIN users u ON u.id = m.sender_user_id
+    $stmt = db()->prepare("SELECT m.message,m.created_at,m.sender_kind AS role
+        FROM suspension_messages m
         WHERE m.case_id = ? ORDER BY m.id ASC LIMIT 300");
     $stmt->execute([$caseId]);
     return $stmt->fetchAll();
