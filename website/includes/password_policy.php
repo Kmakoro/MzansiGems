@@ -30,3 +30,35 @@ function revoke_weak_password_sessions(int $userId): void
     db()->prepare('DELETE FROM api_tokens WHERE user_id = ?')->execute([$userId]);
     db()->prepare('DELETE FROM remember_tokens WHERE user_id = ?')->execute([$userId]);
 }
+
+/**
+ * Persistent, per-email-and-IP attempt counter across PHP workers.
+ * Apply the companion additive SQL migration before deploying this code.
+ */
+function login_throttle_key(string $email): string
+{
+    $address = (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+    return hash('sha256', strtolower(trim($email)) . "\0" . $address);
+}
+
+function login_throttle_blocked(string $email): bool
+{
+    $stmt = db()->prepare('SELECT failures FROM auth_login_attempts WHERE attempt_key = ? AND window_start > DATE_SUB(NOW(), INTERVAL 15 MINUTE)');
+    $stmt->execute([login_throttle_key($email)]);
+    return (int)($stmt->fetchColumn() ?: 0) >= 8;
+}
+
+function login_throttle_fail(string $email): void
+{
+    $stmt = db()->prepare(
+        'INSERT INTO auth_login_attempts (attempt_key, failures, window_start) VALUES (?, 1, NOW())
+         ON DUPLICATE KEY UPDATE failures = IF(window_start <= DATE_SUB(NOW(), INTERVAL 15 MINUTE), 1, failures + 1),
+                                 window_start = IF(window_start <= DATE_SUB(NOW(), INTERVAL 15 MINUTE), NOW(), window_start)'
+    );
+    $stmt->execute([login_throttle_key($email)]);
+}
+
+function login_throttle_success(string $email): void
+{
+    db()->prepare('DELETE FROM auth_login_attempts WHERE attempt_key = ?')->execute([login_throttle_key($email)]);
+}
