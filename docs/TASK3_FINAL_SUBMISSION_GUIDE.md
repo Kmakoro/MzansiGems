@@ -162,3 +162,18 @@ The currently deployed `main` website uses PHP `mail()` in `includes/functions.p
 6. Check Plesk logs only for generic `MzansiGems authenticated SMTP dispatch failed.` messages on failure; don't log SMTP credentials, recipient addresses or token-bearing links.
 
 **Still outstanding:** authenticated SMTP has been verified in Apple Mail but the PHPMailer code has not yet been exercised on the live PHP hosting. The final validation is actual receipt of a website-generated password-reset email.
+
+### HelioHost shared-host alternative: private PHP constants
+
+The deployment already uses `website/config/config.php` to load `dirname(__DIR__, 2) . '/mzansigems-private.php'`, a file **outside** `httpdocs`. The SMTP code also supports constants defined in that already existing private configuration file, which avoids relying on Plesk Composer's environment settings to populate web-request `getenv()`.
+
+Verify the file's existence **by filename only**, make a private backup, and add the following in that file *without pasting private file contents into ChatGPT or GitHub*:
+
+```php
+define('SMTP_HOST', 'johnny.heliohost.org');
+define('SMTP_PORT', 465);
+define('SMTP_USERNAME', 'noreply@vutivivukeya544.helioho.st');
+define('SMTP_PASSWORD', 'THE_ACTUAL_MAILBOX_PASSWORD');
+```
+
+Use the actual unique mailbox password in the private file, taking care to correctly escape quotes/backslashes if present; a password manager is safer. Do **not** put credentials in `composer.json`, `website/config/config.php`, GitHub, logs or any file inside the publicly served `httpdocs` tree. Confirm backup, file permissions and the PHP code deployment first. Keep existing private DB settings unchanged. Test after deploying `includes/functions.php` and the matching email recovery handler; never deploy only a fragment of the complete security changes without compatibility review.
