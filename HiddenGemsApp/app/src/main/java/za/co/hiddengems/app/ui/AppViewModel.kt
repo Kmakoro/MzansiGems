@@ -241,24 +241,37 @@ class AppViewModel(
         }
     }
 
+    private val likeRequestsInFlight = mutableSetOf<Int>()
+
     fun toggleLike(id: Int) {
         requireAuthThen {
+            if (!likeRequestsInFlight.add(id)) return@requireAuthThen
             viewModelScope.launch {
-                when (val result = repository.toggleLike(id)) {
-                    is ApiResult.Success -> {
-                        _state.update { s ->
-                            val selected = s.selectedGem
-                            s.copy(
-                                selectedGem = if (selected?.id == id) selected.copy(
-                                    isLiked = result.value.isLiked ?: selected.isLiked,
-                                    likeCount = result.value.likeCount ?: selected.likeCount,
-                                ) else selected,
-                                gems = s.gems.map { gem -> if (gem.id == id) gem.copy(isLiked = result.value.isLiked ?: gem.isLiked, likeCount = result.value.likeCount ?: gem.likeCount) else gem },
-                                savedGems = s.savedGems.map { gem -> if (gem.id == id) gem.copy(isLiked = result.value.isLiked ?: gem.isLiked, likeCount = result.value.likeCount ?: gem.likeCount) else gem },
-                            )
+                try {
+                    when (val result = repository.toggleLike(id)) {
+                        is ApiResult.Success -> {
+                            val updated = result.value
+                            _state.update { state ->
+                                fun apply(gem: Gem): Gem = if (gem.id == id) gem.copy(
+                                    isLiked = updated.isLiked ?: gem.isLiked,
+                                    likeCount = updated.likeCount ?: gem.likeCount
+                                ) else gem
+                                state.copy(
+                                    selectedGem = state.selectedGem?.let(::apply),
+                                    gems = state.gems.map(::apply),
+                                    savedGems = state.savedGems.map(::apply)
+                                )
+                            }
                         }
+                        is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
                     }
-                    is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
+                } catch (error: kotlinx.coroutines.CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    android.util.Log.e("MzansiGemLike", "Could not react to gem $id", error)
+                    _events.emit(UiEvent.Message("Could not update this reaction. Refresh and try again."))
+                } finally {
+                    likeRequestsInFlight.remove(id)
                 }
             }
         }
@@ -391,20 +404,33 @@ class AppViewModel(
         }
     }
 
+    private val reviewLikeRequestsInFlight = mutableSetOf<Int>()
+
     fun toggleReviewLike(reviewId: Int) {
         requireAuthThen {
+            if (!reviewLikeRequestsInFlight.add(reviewId)) return@requireAuthThen
             viewModelScope.launch {
-                when (val result = repository.toggleReviewLike(reviewId)) {
-                    is ApiResult.Success -> _state.update { s ->
-                        val selected = s.selectedGem
-                        s.copy(selectedGem = selected?.copy(reviews = selected.reviews.map { review ->
-                            if (review.id == reviewId) review.copy(
-                                isLiked = result.value.isLiked ?: review.isLiked,
-                                likeCount = result.value.likeCount ?: review.likeCount,
-                            ) else review
-                        }))
+                try {
+                    when (val result = repository.toggleReviewLike(reviewId)) {
+                        is ApiResult.Success -> _state.update { state ->
+                            state.copy(selectedGem = state.selectedGem?.copy(
+                                reviews = state.selectedGem.reviews.map { review ->
+                                    if (review.id == reviewId) review.copy(
+                                        isLiked = result.value.isLiked ?: review.isLiked,
+                                        likeCount = result.value.likeCount ?: review.likeCount
+                                    ) else review
+                                }
+                            ))
+                        }
+                        is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
                     }
-                    is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
+                } catch (error: kotlinx.coroutines.CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    android.util.Log.e("MzansiGemReviewLike", "Could not react to review $reviewId", error)
+                    _events.emit(UiEvent.Message("Could not update this review reaction. Please refresh."))
+                } finally {
+                    reviewLikeRequestsInFlight.remove(reviewId)
                 }
             }
         }
