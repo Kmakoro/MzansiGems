@@ -370,7 +370,7 @@ function api_validate_gem(array $input, bool $partial = false): array
         if (mb_strlen($description) < 20 || mb_strlen($description) > 500) $errors['description'] = 'Description must be 20 to 500 characters.';
     }
     if ((!$partial || array_key_exists('location', $input)) && $location === '') $errors['location'] = 'Location is required.';
-    if ((!$partial || array_key_exists('city', $input)) && $city === '') $errors['city'] = 'City is required.';
+    if ((!$partial || array_key_exists('city', $input)) && ($city === '' || mb_strlen($city) > 100)) $errors['city'] = 'City is required (maximum 100 characters).';
     if ((!$partial || array_key_exists('vibes', $input)) && $vibes === []) $errors['vibes'] = 'Select at least one vibe.';
     if ((!$partial || array_key_exists('budget_level', $input)) && !in_array($budget, ['Free','Budget','Mid-range','Premium'], true)) $errors['budget_level'] = 'Choose a valid budget level.';
     if ((!$partial || array_key_exists('activity_type', $input)) && !in_array($activity, ['Food','Fitness','Study','Nature','Nightlife','Culture'], true)) $errors['activity_type'] = 'Choose a valid activity type.';
