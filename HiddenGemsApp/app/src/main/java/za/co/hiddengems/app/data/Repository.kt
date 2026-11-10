@@ -151,8 +151,8 @@ class HiddenGemsRepository(
         call { api.moderateReview(id, ModerationRequest(status)) }
     suspend fun resolveReport(id: Int, status: String, note: String = "") =
         call { api.resolveReport(id, ReportResolutionRequest(status, note)) }
-    suspend fun updateAdminUser(id: Int, role: String, status: String) =
-        call { api.updateAdminUser(id, AdminUserRequest(role, status)) }
+    suspend fun updateAdminUser(id: Int, role: String, status: String, suspensionReason: String) =
+        call { api.updateAdminUser(id, AdminUserRequest(role, status, suspensionReason)) }
 
     private fun imageParts(imageUris: List<Uri>): List<MultipartBody.Part> = imageUris.take(3).mapIndexedNotNull { index, uri ->
         val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
