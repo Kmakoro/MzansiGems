@@ -247,13 +247,13 @@ fun ShareGemScreen(
                 ) {
                     OutlinedTextField(
                         value = city,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("City *") },
+                        onValueChange = { city = it.take(100) },
+                        readOnly = false,
+                        label = { Text("City or town (South Africa) *") },
                         leadingIcon = { Icon(Icons.Default.LocationOn, null) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = cityExpanded) },
                         colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth()
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable, true).fillMaxWidth()
                     )
                     ExposedDropdownMenu(
                         expanded = cityExpanded,
