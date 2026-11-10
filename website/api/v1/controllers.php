@@ -10,13 +10,12 @@ function api_auth_register(): never
     $name = trim((string)($input['full_name'] ?? ''));
     $email = strtolower(trim((string)($input['email'] ?? '')));
     $city = trim((string)($input['city'] ?? ''));
-    $cities = ['Cape Town','Johannesburg','Durban','Pretoria','Gqeberha','Bloemfontein','Polokwane','Mbombela','East London','Kimberley'];
     $password = (string)($input['password'] ?? '');
     $confirmation = (string)($input['confirm_password'] ?? $password);
     $errors = [];
     if (mb_strlen($name) < 2 || mb_strlen($name) > 100) $errors['full_name'] = 'Full name must be 2 to 100 characters.';
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors['email'] = 'Enter a valid email address.';
-    if ($city === '' || !in_array($city, $cities, true)) $errors['city'] = 'Select a valid South African city.';
+    if ($city === '' || mb_strlen($city) > 100) $errors['city'] = 'Enter a city (maximum 100 characters).';
     if (($passwordError = password_policy_error($password)) !== null) $errors['password'] = $passwordError;
     if ($password !== $confirmation) $errors['confirm_password'] = 'Passwords do not match.';
     $stmt = db()->prepare('SELECT 1 FROM users WHERE email = ?');
@@ -313,7 +312,7 @@ function api_auth_reset_password(): never
 function api_categories(): never
 {
     api_response([
-        'cities' => ['Cape Town','Johannesburg','Durban','Pretoria','Gqeberha','Bloemfontein','Polokwane','Mbombela','East London','Kimberley'],
+        'cities' => discoverable_cities(),
         'vibes' => ['Chill', 'Romantic', 'Adventurous', 'Social', 'Quiet'],
         'budgets' => ['Free', 'Budget', 'Mid-range', 'Premium'],
         'activities' => ['Food', 'Fitness', 'Study', 'Nature', 'Nightlife', 'Culture'],
@@ -341,7 +340,7 @@ function api_gems_index(): never
         $needle = '%' . $q . '%';
         array_push($params, $needle, $needle, $needle, $needle);
     }
-    if ($city !== '' && $city !== 'All Cities') { $where[] = 'g.city = ?'; $params[] = $city; }
+    if ($city !== '' && $city !== 'All Cities') { $where[] = 'TRIM(g.city) = ?'; $params[] = $city; }
     if ($vibe !== '') { $where[] = 'FIND_IN_SET(?, REPLACE(g.vibes, ", ", ","))'; $params[] = $vibe; }
     if ($budget !== '') { $where[] = 'g.budget_level = ?'; $params[] = $budget; }
     if ($activity !== '') { $where[] = 'g.activity_type = ?'; $params[] = $activity; }
