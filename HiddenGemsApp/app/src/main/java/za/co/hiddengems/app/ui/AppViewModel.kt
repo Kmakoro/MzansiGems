@@ -639,8 +639,8 @@ class AppViewModel(
         }
     }
 
-    fun updateAdminUser(id: Int, role: String, status: String) = launchBusy {
-        when (val result = repository.updateAdminUser(id, role, status)) {
+    fun updateAdminUser(id: Int, role: String, status: String, suspensionReason: String) = launchBusy {
+        when (val result = repository.updateAdminUser(id, role, status, suspensionReason)) {
             is ApiResult.Success -> {
                 _state.update { s -> s.copy(adminUsers = s.adminUsers.map { if (it.id == id) result.value else it }) }
                 _events.emit(UiEvent.Message(result.message))
