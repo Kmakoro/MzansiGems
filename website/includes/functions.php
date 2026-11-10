@@ -199,11 +199,11 @@ function send_app_email(string $to, string $subject, string $body): bool
     // Use the same authenticated SMTP transport already verified from
     // the Plesk mailbox in Apple Mail. Secrets must stay in hosting settings,
     // never in the repository or browser-accessible diagnostics.
-    $smtpHost = trim((string)(getenv('SMTP_HOST') ?: ''));
+    $smtpHost = trim((string)(defined('SMTP_HOST') ? SMTP_HOST : (getenv('SMTP_HOST') ?: '')));
     if ($smtpHost !== '') {
-        $smtpUsername = (string)(getenv('SMTP_USERNAME') ?: '');
-        $smtpPassword = (string)(getenv('SMTP_PASSWORD') ?: '');
-        $smtpPort = (int)(getenv('SMTP_PORT') ?: 465);
+        $smtpUsername = (string)(defined('SMTP_USERNAME') ? SMTP_USERNAME : (getenv('SMTP_USERNAME') ?: ''));
+        $smtpPassword = (string)(defined('SMTP_PASSWORD') ? SMTP_PASSWORD : (getenv('SMTP_PASSWORD') ?: ''));
+        $smtpPort = (int)(defined('SMTP_PORT') ? SMTP_PORT : (getenv('SMTP_PORT') ?: 465));
         if ($smtpUsername === '' || $smtpPassword === '' || $smtpPort < 1 || $smtpPort > 65535) {
             error_log('MzansiGems SMTP setup incomplete: username, password or port missing.');
             return false;
