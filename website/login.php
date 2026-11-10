@@ -19,6 +19,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $stmt->fetch();
         }
         if (!$user || !password_verify($password, $user['password_hash'])) $errors[] = 'The email address or password is incorrect.';
+        elseif (password_upgrade_required($password)) {
+            revoke_weak_password_sessions((int)$user['id']);
+            $errors[] = 'Your password no longer meets our security requirements. Please use Forgot password to reset it before signing in.';
+        }
         elseif ($user['status'] !== 'active') $errors[] = 'This account is suspended. Contact an administrator.';
         elseif (setting('require_email_verification', '0') === '1' && empty($user['email_verified_at'])) {
             $errors[] = 'Verify your email address before signing in.';
