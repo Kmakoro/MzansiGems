@@ -301,7 +301,7 @@ function api_auth_reset_password(): never
     try {
         db()->prepare('UPDATE users SET password_hash = ?, password_reset_required = 0 WHERE id = ?')->execute([password_hash($password, PASSWORD_DEFAULT), $userId]);
         db()->prepare('UPDATE password_resets SET used_at = NOW() WHERE id = ?')->execute([(int)$record['id']]);
-        revoke_weak_password_sessions($userId);
+        revoke_password_sessions($userId);
         db()->commit();
     } catch (Throwable $e) {
         if (db()->inTransaction()) db()->rollBack();
