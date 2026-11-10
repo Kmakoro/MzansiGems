@@ -64,12 +64,20 @@ function api_auth_login(): never
     if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $password === '') {
         api_error('Email and password are required.', 422);
     }
+    if (login_throttle_blocked($email)) {
+        api_error('Too many sign-in attempts. Please try again in 15 minutes.', 429);
+    }
+    $loginStartedAt = microtime(true);
     $stmt = db()->prepare('SELECT id,full_name,email,city,bio,role,status,level,points,password_hash,email_verified_at,notify_new_gems,notify_comments,notify_likes_saves,personalized_recommendations,show_saved_gems,show_activity_status,created_at,updated_at FROM users WHERE email = ? LIMIT 1');
     $stmt->execute([$email]);
     $user = $stmt->fetch();
     if (!$user || !password_verify($password, (string)$user['password_hash'])) {
+        login_throttle_fail($email);
+        error_log('MzansiGems auth_login outcome=failure elapsed_ms=' . round((microtime(true) - $loginStartedAt) * 1000));
         api_error('The email address or password is incorrect.', 401);
     }
+    login_throttle_success($email);
+    error_log('MzansiGems auth_login outcome=verified elapsed_ms=' . round((microtime(true) - $loginStartedAt) * 1000));
     if (password_upgrade_required($password)) {
         revoke_weak_password_sessions((int)$user['id']);
         api_error('Your password no longer meets our security requirements. Please use Forgot password to reset it before signing in.', 403, ['code' => 'PASSWORD_RESET_REQUIRED']);
