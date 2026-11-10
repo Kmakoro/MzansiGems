@@ -10,7 +10,7 @@ $activity = trim((string)($_GET['activity'] ?? ''));
 $where = ["g.status = 'approved'"];
 $params = [];
 if ($q !== '') { $where[] = '(g.title LIKE ? OR g.description LIKE ? OR g.location LIKE ? OR g.city LIKE ?)'; $like = '%' . $q . '%'; array_push($params,$like,$like,$like,$like); }
-if ($city !== '') { $where[] = 'g.city = ?'; $params[] = $city; }
+if ($city !== '') { $where[] = 'TRIM(g.city) = ?'; $params[] = $city; }
 if ($vibe !== '') { $where[] = 'FIND_IN_SET(?, REPLACE(g.vibes, ", ", ",")) > 0'; $params[] = $vibe; }
 if ($budget !== '') { $where[] = 'g.budget_level = ?'; $params[] = $budget; }
 if ($activity !== '') { $where[] = 'g.activity_type = ?'; $params[] = $activity; }
@@ -34,7 +34,7 @@ $pageTitle='Discover Mzansi Gem'; require __DIR__.'/includes/header.php';
 <form class="filters" method="get">
 <div class="filter-grid">
 <div class="form-group search-wide"><label>Keyword or location</label><input class="form-control" name="q" value="<?=e($q)?>" placeholder="Coffee, rooftop, Braamfontein…"></div>
-<div class="form-group"><label>City</label><select class="form-control" name="city"><option value="">All Cities</option><?php foreach(['Cape Town','Johannesburg','Durban','Pretoria'] as $option):?><option value="<?=e($option)?>" <?=$city===$option?'selected':''?>><?=e($option)?></option><?php endforeach;?></select></div>
+<div class="form-group"><label>City</label><select class="form-control" name="city"><option value="">All Cities</option><?php foreach(discoverable_cities() as $option):?><option value="<?=e($option)?>" <?=$city===$option?'selected':''?>><?=e($option)?></option><?php endforeach;?></select></div>
 <div class="form-group"><label>Vibe</label><select class="form-control" name="vibe"><option value="">All Vibes</option><?php foreach(['Chill','Romantic','Adventurous','Social','Quiet'] as $option):?><option <?=$vibe===$option?'selected':''?>><?=e($option)?></option><?php endforeach;?></select></div>
 <div class="form-group"><label>Budget</label><select class="form-control" name="budget"><option value="">All Budgets</option><?php foreach(['Free','Budget','Mid-range','Premium'] as $option):?><option <?=$budget===$option?'selected':''?>><?=e($option)?></option><?php endforeach;?></select></div>
 <div class="form-group"><label>Activity</label><select class="form-control" name="activity"><option value="">All Activities</option><?php foreach(['Food','Fitness','Study','Nature','Nightlife','Culture'] as $option):?><option <?=$activity===$option?'selected':''?>><?=e($option)?></option><?php endforeach;?></select></div>
