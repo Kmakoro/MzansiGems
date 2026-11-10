@@ -54,6 +54,8 @@ data class AppUiState(
     val activity: String = "",
     val sort: String = "recommended",
     val serverOnline: Boolean? = null,
+    val suspensionNotice: String? = null,
+    val suspensionAppealUrl: String? = null,
 )
 
 sealed interface UiEvent {
@@ -132,7 +134,11 @@ class AppViewModel(
                 _events.emit(UiEvent.Message(result.message.ifBlank { "Welcome back!" }))
                 _events.emit(UiEvent.Navigate("home"))
             }
-            is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
+            is ApiResult.Error -> {
+                if (result.fieldErrors["code"] == "ACCOUNT_SUSPENDED") {
+                    _state.update { it.copy(suspensionNotice = result.message, suspensionAppealUrl = result.fieldErrors["appeal_url"]) }
+                } else _events.emit(UiEvent.Message(result.message))
+            }
         }
     }
 
@@ -143,7 +149,11 @@ class AppViewModel(
                 _events.emit(UiEvent.Message(result.message.ifBlank { "Signed in with Google." }))
                 _events.emit(UiEvent.Navigate("home"))
             }
-            is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
+            is ApiResult.Error -> {
+                if (result.fieldErrors["code"] == "ACCOUNT_SUSPENDED") {
+                    _state.update { it.copy(suspensionNotice = result.message, suspensionAppealUrl = result.fieldErrors["appeal_url"]) }
+                } else _events.emit(UiEvent.Message(result.message))
+            }
         }
     }
 
@@ -647,6 +657,10 @@ class AppViewModel(
             }
             is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
         }
+    }
+
+    fun dismissSuspensionNotice() {
+        _state.update { it.copy(suspensionNotice = null, suspensionAppealUrl = null) }
     }
 
     fun dismissVerificationNotice() {
