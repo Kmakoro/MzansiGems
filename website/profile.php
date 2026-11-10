@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__.'/includes/bootstrap.php';require_login();
-$user=current_user();$userId=(int)$user['id'];$pastSuspensionCount=(int)(function()use($userId){$s=db()->prepare('SELECT COUNT(*) FROM suspension_cases WHERE user_id=?');$s->execute([$userId]);return $s->fetchColumn();})();$tab=(string)($_GET['tab']??'posted');if(!in_array($tab,['posted','saved','reviews'],true))$tab='posted';
+$user=current_user();$userId=(int)$user['id'];$historyStmt=db()->prepare('SELECT COUNT(*) FROM suspension_cases WHERE user_id=?');$historyStmt->execute([$userId]);$pastSuspensionCount=(int)$historyStmt->fetchColumn();$tab=(string)($_GET['tab']??'posted');if(!in_array($tab,['posted','saved','reviews'],true))$tab='posted';
 $stmt=db()->prepare('SELECT COUNT(*) FROM gems WHERE user_id=?');$stmt->execute([$userId]);$postedCount=(int)$stmt->fetchColumn();
 $stmt=db()->prepare('SELECT COUNT(*) FROM saved_gems WHERE user_id=?');$stmt->execute([$userId]);$savedCount=(int)$stmt->fetchColumn();
 $stmt=db()->prepare('SELECT COUNT(*) FROM reviews WHERE user_id=?');$stmt->execute([$userId]);$reviewCount=(int)$stmt->fetchColumn();
