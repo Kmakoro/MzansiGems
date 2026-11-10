@@ -139,3 +139,26 @@ Plesk's own support documentation describes `can't apply process slot` and inter
 7. Do not flag production accounts for mandatory reset until a tested, deliverable email method is in place.
 
 **No mailbox passwords, API keys or reset URLs should be pasted into documentation or ChatGPT.**
+
+## Verified outgoing SMTP + PHPMailer integration (10 November 2026)
+
+The group created `noreply@vutivivukeya544.helioho.st` in Plesk. Apple Mail configured the mailbox using **authenticated SMTP with TLS** and its MzansiGems delivery test was received in a personally controlled Gmail inbox at **18:44 SAST**. This is **evidence that the mailbox can send via authenticated SMTP**, not that PHP `mail()` or password-reset email works.
+
+The currently deployed `main` website uses PHP `mail()` in `includes/functions.php` and displays the reset success notice even when mail delivery fails. The final review branch adds optional secure authenticated SMTP with PHPMailer and retains delivery-failure logging. **It remains UNDEPLOYED.**
+
+### Deployment prerequisites for authenticated SMTP (only after separate backup and staging checks)
+
+1. Ensure the final-review branch's `website/composer.json` is present in the website application root. Use Plesk **PHP Composer** or a trusted Composer terminal to install dependencies in `website/vendor/`; never commit `vendor/` or credentials.
+2. Add the following to **private server-side environment settings**, not the repository or public `httpdocs` content:
+   - `SMTP_HOST=johnny.heliohost.org`
+   - `SMTP_PORT=465`
+   - `SMTP_USERNAME=noreply@vutivivukeya544.helioho.st`
+   - `SMTP_PASSWORD=<mailbox password stored privately>`
+   - `MAIL_FROM=noreply@vutivivukeya544.helioho.st`
+   - `APP_ENV=production` and the actual HTTPS `APP_URL`
+3. Ensure the certificate hostname matches `johnny.heliohost.org`. Never disable TLS certificate checks to get the SMTP connection working. The app uses implicit TLS on 465 and STARTTLS for other configured ports.
+4. Do not copy the whole final-review branch to live before its **database migration** and other prerequisites are satisfied. A controlled deployment can update only email-related files/dependencies if staging verifies compatibility.
+5. Test with a disposable active account that has a real, reachable recipient mailbox: form submission, arrival of reset email, valid single-use token, password strength, successful sign-in with new password, and rejection of used token. Ensure the reset link uses the HTTPS domain and never log the token.
+6. Check Plesk logs only for generic `MzansiGems authenticated SMTP dispatch failed.` messages on failure; don't log SMTP credentials, recipient addresses or token-bearing links.
+
+**Still outstanding:** authenticated SMTP has been verified in Apple Mail but the PHPMailer code has not yet been exercised on the live PHP hosting. The final validation is actual receipt of a website-generated password-reset email.
