@@ -80,13 +80,13 @@ function api_auth_login(): never
     }
     login_throttle_success($email);
     error_log('MzansiGems auth_login outcome=verified elapsed_ms=' . round((microtime(true) - $loginStartedAt) * 1000));
-    if (password_upgrade_required($password) || (int)($user['password_reset_required'] ?? 0) === 1) {
-        revoke_weak_password_sessions((int)$user['id']);
-        api_error('Your password no longer meets our security requirements. Please use Forgot password to reset it before signing in.', 403, ['code' => 'PASSWORD_RESET_REQUIRED']);
-    }
     if ($user['status'] !== 'active') {
         api_error('Account suspended. Reason: ' . suspension_reason_for((int)$user['id']) .
             ' You may appeal on the website: ' . url('login.php'), 403, ['code' => 'ACCOUNT_SUSPENDED', 'appeal_url' => url('login.php')]);
+    }
+    if (password_upgrade_required($password) || (int)($user['password_reset_required'] ?? 0) === 1) {
+        revoke_weak_password_sessions((int)$user['id']);
+        api_error('Your password no longer meets our security requirements. Please use Forgot password to reset it before signing in.', 403, ['code' => 'PASSWORD_RESET_REQUIRED']);
     }
     if (setting('require_email_verification', '0') === '1' && empty($user['email_verified_at'])) {
         api_error('Please verify your email address before signing in.', 403);
