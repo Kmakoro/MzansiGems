@@ -39,7 +39,7 @@ function api_auth_register(): never
         $verificationToken = create_email_verification_token($userId);
         $webVerifyLink = url('verify-email.php?token=' . urlencode($verificationToken));
         $appVerifyLink = 'mzansigem://auth/verify-email?token=' . urlencode($verificationToken);
-        send_app_email(
+        $verificationSent = send_app_email(
             $email,
             'Verify your Mzansi Gem email',
             "Welcome to Mzansi Gem!\n\nWebsite:\n{$webVerifyLink}\n\nAndroid app:\n{$appVerifyLink}\n\nThese links expire in 24 hours."
