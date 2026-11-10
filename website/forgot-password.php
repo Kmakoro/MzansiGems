@@ -4,27 +4,33 @@ require __DIR__ . '/includes/bootstrap.php';
 $devLink = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
-    $email = strtolower(trim((string)($_POST['email'] ?? '')));
-    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $stmt = db()->prepare('SELECT id FROM users WHERE email = ? LIMIT 1'); $stmt->execute([$email]); $id = $stmt->fetchColumn();
-        if ($id) {
-            $token = bin2hex(random_bytes(32));
-            $stmt = db()->prepare('INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))');
-            $stmt->execute([(int)$id, hash('sha256', $token)]);
-            $resetLink = url('reset-password.php?token=' . urlencode($token));
-            $sent = send_app_email($email, 'Reset your Mzansi Gem password', "A password reset was requested for your Mzansi Gem account.
 
-Reset your password using this link:
-{$resetLink}
-
-This link expires in one hour.");
-            if (!$sent) error_log('MzansiGems password reset email could not be dispatched.');
-            if (APP_ENV === 'development') {
-                $devLink = $resetLink;
+    if (!filter_var(MAIL_FROM, FILTER_VALIDATE_EMAIL)) {
+        flash('warning', 'Password-reset emails are temporarily unavailable. Please contact site support.');
+    } else {
+        $email = strtolower(trim((string)($_POST['email'] ?? '')));
+        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $stmt = db()->prepare("SELECT id FROM users WHERE email = ? AND status='active' LIMIT 1");
+            $stmt->execute([$email]);
+            $id = $stmt->fetchColumn();
+            if ($id) {
+                $limit = db()->prepare('SELECT COUNT(*) FROM password_resets WHERE user_id=? AND created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE)');
+                $limit->execute([(int)$id]);
+                if ((int)$limit->fetchColumn() < 3) {
+                    $token = bin2hex(random_bytes(32));
+                    db()->prepare('DELETE FROM password_resets WHERE user_id=? AND used_at IS NULL')->execute([(int)$id]);
+                    db()->prepare('INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))')
+                        ->execute([(int)$id, hash('sha256', $token)]);
+                    $resetLink = url('reset-password.php?token=' . urlencode($token));
+                    $sent = send_app_email($email, 'Reset your Mzansi Gem password',
+                        "A password reset was requested for your Mzansi Gem account.\n\nOpen this link to reset your password:\n{$resetLink}\n\nThis link expires in one hour.");
+                    if (!$sent) error_log('MzansiGems website password reset email could not be dispatched.');
+                    if (APP_ENV === 'development') $devLink = $resetLink;
+                }
             }
         }
+        flash('success', 'If an active account exists, password reset instructions will be emailed. Check your inbox and spam folder. If no email arrives, contact site support.');
     }
-    flash('success', 'If an account exists, password reset instructions will be emailed when delivery is available. Please check your inbox and spam folder.');
 }
 $pageTitle='Forgot password'; $bodyClass='auth-body'; require __DIR__.'/includes/header.php';
 ?>
