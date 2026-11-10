@@ -60,6 +60,9 @@ function suspension_update_user(int $userId, string $role, string $status, strin
         throw new DomainException('You cannot demote or suspend your own administrator account.');
     }
     $reason = trim($reason);
+    if ($status === 'suspended' && $reason !== '' && mb_strlen($reason) < 10) {
+        throw new DomainException('Explain the reason for suspension in at least 10 characters.');
+    }
     if (mb_strlen($reason) > 500) {
         throw new DomainException('The suspension reason must be 500 characters or fewer.');
     }
