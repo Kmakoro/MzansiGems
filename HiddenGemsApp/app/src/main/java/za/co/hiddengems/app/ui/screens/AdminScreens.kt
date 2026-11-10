@@ -76,7 +76,7 @@ fun AdminScreen(
     onModerateGem: (Int, String, String) -> Unit,
     onModerateReview: (Int, String) -> Unit,
     onResolveReport: (Int, String, String) -> Unit,
-    onUpdateUser: (Int, String, String) -> Unit,
+    onUpdateUser: (Int, String, String, String) -> Unit,
     onSaveSettings: (Map<String, String>) -> Unit,
 ) {
     LaunchedEffect(Unit) { onLoad() }
@@ -250,7 +250,7 @@ private fun ReportCard(report: ContentReport, onResolve: (Int, String, String) -
 }
 
 @Composable
-private fun AdminUsers(users: List<User>, onUpdate: (Int, String, String) -> Unit) {
+private fun AdminUsers(users: List<User>, onUpdate: (Int, String, String, String) -> Unit) {
     var editing by remember { mutableStateOf<User?>(null) }
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
@@ -277,6 +277,7 @@ private fun AdminUsers(users: List<User>, onUpdate: (Int, String, String) -> Uni
     editing?.let { user ->
         var role by remember(user.id) { mutableStateOf(user.role) }
         var status by remember(user.id) { mutableStateOf(user.status) }
+        var suspensionReason by remember(user.id) { mutableStateOf(user.suspensionReason) }
         AlertDialog(
             onDismissRequest = { editing = null },
             title = { Text("Manage ${user.fullName}") },
@@ -290,9 +291,24 @@ private fun AdminUsers(users: List<User>, onUpdate: (Int, String, String) -> Uni
                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                         listOf("active", "suspended").forEach { FilterChip(selected = status == it, onClick = { status = it }, label = { Text(it) }) }
                     }
+                    if (status == "suspended") {
+                        OutlinedTextField(
+                            value = suspensionReason,
+                            onValueChange = { suspensionReason = it.take(500) },
+                            label = { Text("Reason shown to suspended user") },
+                            supportingText = { Text("Explain the decision. Members can appeal on the website.") },
+                            minLines = 3,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
             },
-            confirmButton = { Button(onClick = { onUpdate(user.id, role, status); editing = null }) { Text("Save") } },
+            confirmButton = {
+                Button(
+                    enabled = status != "suspended" || suspensionReason.isNotBlank(),
+                    onClick = { onUpdate(user.id, role, status, suspensionReason.trim()); editing = null }
+                ) { Text("Save") }
+            },
             dismissButton = { TextButton(onClick = { editing = null }) { Text("Cancel") } },
         )
     }
