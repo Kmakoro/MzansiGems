@@ -118,7 +118,7 @@ require dirname(__DIR__) . '/includes/admin-header.php';
                         <div class="reason-field" <?= $u['status'] === 'suspended' ? '' : 'hidden' ?>>
                             <label for="reason-<?= (int)$u['id'] ?>">Reason shown to the user (required for a new suspension)</label>
                             <textarea class="form-control" id="reason-<?= (int)$u['id'] ?>" name="suspension_reason"
-                                maxlength="500" placeholder="Describe the policy violation, evidence or safety concern."><?= e($u['suspension_reason'] ?? '') ?></textarea>
+                                minlength="10" maxlength="500" placeholder="Describe the policy violation, evidence or safety concern."><?= e($u['suspension_reason'] ?? '') ?></textarea>
                         </div>
                         <button class="btn btn-primary btn-sm" type="submit">Save account changes</button>
                     </form>
