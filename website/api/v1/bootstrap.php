@@ -135,7 +135,7 @@ function api_token_record(): ?array
     $stmt->execute([$hash]);
     $record = $stmt->fetch() ?: null;
     if ($record && $record['status'] === 'active') {
-        db()->prepare('UPDATE api_tokens SET last_used_at = NOW() WHERE id = ?')->execute([(int)$record['token_id']]);
+        db()->prepare('UPDATE api_tokens SET last_used_at = NOW() WHERE id = ? AND (last_used_at IS NULL OR last_used_at < DATE_SUB(NOW(), INTERVAL 5 MINUTE))')->execute([(int)$record['token_id']]);
         return $record;
     }
     return $record = null;
