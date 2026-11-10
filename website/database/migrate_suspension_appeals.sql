@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS suspension_messages (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     case_id BIGINT UNSIGNED NOT NULL,
     sender_user_id INT UNSIGNED NULL,
+    sender_kind ENUM('member','admin') NOT NULL DEFAULT 'member',
     message VARCHAR(2000) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_suspension_message_case FOREIGN KEY (case_id) REFERENCES suspension_cases(id) ON DELETE CASCADE,
