@@ -67,6 +67,7 @@ data class User(
     val bio: String = "",
     val role: String = "user",
     val status: String = "active",
+    @SerializedName("suspension_reason") val suspensionReason: String = "",
     val level: Int = 1,
     val points: Int = 0,
     @SerializedName("email_verified") val emailVerified: Boolean = false,
@@ -248,7 +249,11 @@ data class ModerationRequest(
     val status: String,
     @SerializedName("rejection_reason") val rejectionReason: String = "",
 )
-data class AdminUserRequest(val role: String, val status: String)
+data class AdminUserRequest(
+    val role: String,
+    val status: String,
+    @SerializedName("suspension_reason") val suspensionReason: String = "",
+)
 data class ReportResolutionRequest(
     val status: String,
     @SerializedName("resolution_note") val resolutionNote: String = "",
