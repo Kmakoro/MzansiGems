@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             login_throttle_success($email);
             error_log('MzansiGems website_login outcome=verified elapsed_ms=' . round((microtime(true) - $loginStartedAt) * 1000));
         }
-        if (!$errors && password_upgrade_required($password)) {
+        if (!$errors && (password_upgrade_required($password) || (int)($user['password_reset_required'] ?? 0) === 1)) {
 
             revoke_weak_password_sessions((int)$user['id']);
             $errors[] = 'Your password no longer meets our security requirements. Please use Forgot password to reset it before signing in.';
