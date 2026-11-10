@@ -115,3 +115,27 @@ Plesk's own support documentation describes `can't apply process slot` and inter
 **Hosting escalation:** Group should report the exact dates/messages to HelioHost Customer Service for Johnny, asking staff to inspect the FastCGI process pool, account CPU/resource throttling, PHP workers, upstream availability and restart records. They should not attempt root-level Apache configuration on a shared host.
 
 **Next safe deployment activity:** Full independent file/database backup in Plesk/phpMyAdmin; verify email service and real password-reset receipt; only then apply the additive migration and test staged deployment. Avoid running load tests against public shared hosting without permission.
+
+## Password recovery on the actual HelioHost domain (important)
+
+**Evidence:** Plesk > Mail > Email Addresses showed no created mailboxes on 10 November 2026. This does *not* conclusively prove that PHP mail cannot send, but the sender configuration and message delivery have not been verified. The live website still runs main, not the reviewed password-recovery branch.
+
+**Distinguish two failures first:**
+- `GET /forgot-password.php` itself returns 502/500: the PHP email sender is not invoked on GET. Inspect Plesk nginx/Apache/FastCGI logs at the same timestamp and confirm the deployed file / URL; upstream errors cannot be hidden by PHP.
+- The form loads, but `POST /forgot-password.php` fails or no email arrives: inspect `MAIL_FROM`, PHP mail transport, per-account reset limits, `password_resets` table and log `MzansiGems ... dispatch failed`. Never expose raw reset tokens in public HTML or logs.
+
+**Important provider constraint:** HelioHost says its `helioho.st` and `heliohost.us` domains cannot use non-HelioHost mail services; DNS changes for these subdomains require host support. Prefer a mailbox created using Plesk Mail for this `helioho.st` domain and a HelioHost-supported PHP mail configuration. Do not deploy Brevo as the sender for this HelioHost subdomain without first obtaining permission or configuring a separately owned, independently verified sender domain. Provider sources:
+- https://wiki.helionet.org/Manage_HelioHost_DNS
+- https://wiki.helionet.org/Unlimited_Email_Accounts
+- https://helionet.org/index/topic/65404-smtp-timeout-%E2%80%94-unable-to-connect-to-mailtanzilskillheliohost/
+
+**Recovery acceptance test (disposable account with real email, staging first):**
+1. Loading the link from Sign In shows the request form; no email delivery runs on GET.
+2. Request with a valid email; actual mailbox receives the email and the reset URL points to the correct HTTPS domain.
+3. Set a password under 12 characters: rejected.
+4. Set a sufficiently strong password: accepted; account reset flag cleared, existing bearer/remember tokens revoked.
+5. Previous password and already-used/expired reset links: rejected.
+6. Repeat from the Android Forgot Password flow using the shared API.
+7. Do not flag production accounts for mandatory reset until a tested, deliverable email method is in place.
+
+**No mailbox passwords, API keys or reset URLs should be pasted into documentation or ChatGPT.**
