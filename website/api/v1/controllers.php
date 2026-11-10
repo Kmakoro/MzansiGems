@@ -85,7 +85,8 @@ function api_auth_login(): never
         api_error('Your password no longer meets our security requirements. Please use Forgot password to reset it before signing in.', 403, ['code' => 'PASSWORD_RESET_REQUIRED']);
     }
     if ($user['status'] !== 'active') {
-        api_error('This account is suspended.', 403);
+        api_error('Account suspended. Reason: ' . suspension_reason_for((int)$user['id']) .
+            ' You may appeal on the website: ' . url('login.php'), 403, ['code' => 'ACCOUNT_SUSPENDED', 'appeal_url' => url('login.php')]);
     }
     if (setting('require_email_verification', '0') === '1' && empty($user['email_verified_at'])) {
         api_error('Please verify your email address before signing in.', 403);
@@ -177,8 +178,10 @@ function api_auth_firebase(): never
         $user = $stmt->fetch();
     }
 
-    if (!$user || $user['status'] !== 'active') {
-        api_error('This account is suspended or unavailable.', 403);
+    if (!$user) api_error('This account is unavailable.', 403);
+    if ($user['status'] !== 'active') {
+        api_error('Account suspended. Reason: ' . suspension_reason_for((int)$user['id']) .
+            ' You may appeal on the website: ' . url('login.php'), 403, ['code' => 'ACCOUNT_SUSPENDED', 'appeal_url' => url('login.php')]);
     }
 
     // Repair only the placeholder from earlier Google registrations. Never
@@ -838,7 +841,11 @@ function api_admin_user_update(int $id): never
     $status = (string)($input['status'] ?? '');
     if (!in_array($role, ['user','admin'], true) || !in_array($status, ['active','suspended'], true)) api_error('Choose a valid role and status.', 422);
     if ($id === (int)$admin['id'] && $status === 'suspended') api_error('You cannot suspend your own account.', 422);
-    db()->prepare('UPDATE users SET role=?,status=? WHERE id=?')->execute([$role, $status, $id]);
+    try {
+        suspension_update_user($id, $role, $status, (string)($input['suspension_reason'] ?? ''), (int)$admin['id']);
+    } catch (DomainException $error) {
+        api_error($error->getMessage(), 422);
+    }
     $stmt = db()->prepare('SELECT id,full_name,email,city,bio,role,status,level,points,email_verified_at,notify_new_gems,notify_comments,notify_likes_saves,personalized_recommendations,show_saved_gems,show_activity_status,created_at,updated_at FROM users WHERE id=?'); $stmt->execute([$id]);
     $user = $stmt->fetch(); if (!$user) api_error('User not found.', 404);
     api_response(api_public_user($user), 'User updated.');
