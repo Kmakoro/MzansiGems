@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (($passwordError = password_policy_error($password)) !== null) $errors[] = $passwordError;
     if ($password !== $confirm) $errors[] = 'Passwords do not match.';
 
+    if (setting('require_email_verification', '0') === '1' && !filter_var(MAIL_FROM, FILTER_VALIDATE_EMAIL)) $errors[] = 'Email verification is temporarily unavailable. Please try again later.';
     if (!$errors) {
         $check = db()->prepare('SELECT id FROM users WHERE email = ?');
         $check->execute([$email]);
