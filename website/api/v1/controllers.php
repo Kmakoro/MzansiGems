@@ -34,7 +34,7 @@ function api_auth_register(): never
 
     if ($requiresVerification) {
         $verificationToken = create_email_verification_token($userId);
-        $webVerifyLink = api_request_origin() . '/verify-email.php?token=' . urlencode($verificationToken);
+        $webVerifyLink = url('verify-email.php?token=' . urlencode($verificationToken));
         $appVerifyLink = 'mzansigem://auth/verify-email?token=' . urlencode($verificationToken);
         send_app_email(
             $email,
@@ -240,9 +240,9 @@ function api_auth_forgot_password(): never
             db()->prepare('DELETE FROM password_resets WHERE user_id = ? AND used_at IS NULL')->execute([(int)$userId]);
             db()->prepare('INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))')
                 ->execute([(int)$userId, hash('sha256', $token)]);
-            $resetLink = api_request_origin() . '/reset-password.php?token=' . urlencode($token);
+            $resetLink = url('reset-password.php?token=' . urlencode($token));
             $appResetLink = 'mzansigem://auth/reset-password?token=' . urlencode($token);
-            send_app_email($email, 'Reset your Mzansi Gem password', "A password reset was requested for your Mzansi Gem account.
+            $sent = send_app_email($email, 'Reset your Mzansi Gem password', "A password reset was requested for your Mzansi Gem account.
 
 Website:
 {$resetLink}
@@ -251,6 +251,7 @@ Android app:
 {$appResetLink}
 
 These links expire in one hour.");
+            if (!$sent) error_log('MzansiGems API password reset email could not be dispatched.');
         }
     }
     api_response(null, 'If the account exists, a password reset link has been sent.');
