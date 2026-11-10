@@ -15,6 +15,21 @@ if ($vibe !== '') { $where[] = 'FIND_IN_SET(?, REPLACE(g.vibes, ", ", ",")) > 0'
 if ($budget !== '') { $where[] = 'g.budget_level = ?'; $params[] = $budget; }
 if ($activity !== '') { $where[] = 'g.activity_type = ?'; $params[] = $activity; }
 $gems = query_gems(implode(' AND ', $where), $params, 'g.average_rating DESC, g.created_at DESC', 60);
+// Build the city filter from live approved listings, including towns not in
+// the original four-city dropdown. Self-contained for a safe one-file hotfix.
+$cityOptions = db()->query(
+    "SELECT DISTINCT TRIM(city) AS city
+     FROM gems
+     WHERE status = 'approved'
+       AND city IS NOT NULL
+       AND TRIM(city) <> ''
+     ORDER BY city"
+)->fetchAll(PDO::FETCH_COLUMN);
+if ($city !== '' && !in_array($city, $cityOptions, true)) {
+    $cityOptions[] = $city;
+}
+natcasesort($cityOptions);
+
 $recommended = [];
 if (is_logged_in() && $q === '' && $city === '' && $vibe === '' && $budget === '' && $activity === '' && (int)current_user()['personalized_recommendations'] === 1) {
     $stmt = db()->prepare("SELECT activity_type,COUNT(*) AS total FROM (SELECT g.activity_type FROM saved_gems sg JOIN gems g ON g.id=sg.gem_id WHERE sg.user_id=? UNION ALL SELECT g.activity_type FROM gem_likes gl JOIN gems g ON g.id=gl.gem_id WHERE gl.user_id=?) interests GROUP BY activity_type ORDER BY total DESC LIMIT 2");
@@ -34,7 +49,7 @@ $pageTitle='Discover Mzansi Gem'; require __DIR__.'/includes/header.php';
 <form class="filters" method="get">
 <div class="filter-grid">
 <div class="form-group search-wide"><label>Keyword or location</label><input class="form-control" name="q" value="<?=e($q)?>" placeholder="Coffee, rooftop, Braamfontein…"></div>
-<div class="form-group"><label>City</label><select class="form-control" name="city"><option value="">All Cities</option><?php foreach(discoverable_cities() as $option):?><option value="<?=e($option)?>" <?=$city===$option?'selected':''?>><?=e($option)?></option><?php endforeach;?></select></div>
+<div class="form-group"><label>City</label><select class="form-control" name="city"><option value="">All Cities</option><?php foreach($cityOptions as $option):?><option value="<?=e($option)?>" <?=$city===$option?'selected':''?>><?=e($option)?></option><?php endforeach;?></select></div>
 <div class="form-group"><label>Vibe</label><select class="form-control" name="vibe"><option value="">All Vibes</option><?php foreach(['Chill','Romantic','Adventurous','Social','Quiet'] as $option):?><option <?=$vibe===$option?'selected':''?>><?=e($option)?></option><?php endforeach;?></select></div>
 <div class="form-group"><label>Budget</label><select class="form-control" name="budget"><option value="">All Budgets</option><?php foreach(['Free','Budget','Mid-range','Premium'] as $option):?><option <?=$budget===$option?'selected':''?>><?=e($option)?></option><?php endforeach;?></select></div>
 <div class="form-group"><label>Activity</label><select class="form-control" name="activity"><option value="">All Activities</option><?php foreach(['Food','Fitness','Study','Nature','Nightlife','Culture'] as $option):?><option <?=$activity===$option?'selected':''?>><?=e($option)?></option><?php endforeach;?></select></div>
