@@ -1,7 +1,11 @@
 <?php
 declare(strict_types=1);
 
-require_once dirname(__DIR__, 2) . '/includes/bootstrap.php';
+// Stateless bearer-token requests do not need a PHP session or remember-me cookie lookup.
+// Avoid session-file locks when many Android users call the API concurrently.
+require_once dirname(__DIR__, 2) . '/config/config.php';
+require_once dirname(__DIR__, 2) . '/config/database.php';
+require_once dirname(__DIR__, 2) . '/includes/functions.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -134,8 +138,9 @@ function api_token_record(): ?array
         LIMIT 1");
     $stmt->execute([$hash]);
     $record = $stmt->fetch() ?: null;
-    if ($record && $record['status'] === 'active') {
-        db()->prepare('UPDATE api_tokens SET last_used_at = NOW() WHERE id = ?')->execute([(int)$record['token_id']]);
+    if ($record && $record['status'] === 'active' && empty($record['must_reset_password'])) {
+        // Reduce unnecessary writes; one last-used update per token every five minutes.
+        db()->prepare('UPDATE api_tokens SET last_used_at = NOW() WHERE id = ? AND (last_used_at IS NULL OR last_used_at < DATE_SUB(NOW(), INTERVAL 5 MINUTE))')->execute([(int)$record['token_id']]);
         return $record;
     }
     return $record = null;
