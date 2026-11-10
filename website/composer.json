@@ -1,0 +1,13 @@
+{
+  "name": "mzansigems/website",
+  "description": "MzansiGems PHP website dependencies for secure transactional email",
+  "type": "project",
+  "require": {
+    "php": ">=8.1",
+    "phpmailer/phpmailer": "^6.10"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true
+  }
+}
