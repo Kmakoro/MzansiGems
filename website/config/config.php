@@ -23,7 +23,7 @@ $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' :
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 
 define('APP_URL', rtrim((string)(getenv('APP_URL') ?: $scheme . '://' . $host . $basePath), '/'));
-define('APP_ENV', (string)(getenv('APP_ENV') ?: 'development'));
+define('APP_ENV', (string)(getenv('APP_ENV') ?: 'production'));
 define('DB_HOST', (string)(getenv('DB_HOST') ?: '127.0.0.1'));
 define('DB_PORT', (string)(getenv('DB_PORT') ?: '3306'));
 define('DB_NAME', (string)(getenv('DB_NAME') ?: 'hidden_gems'));
@@ -33,3 +33,4 @@ define('GOOGLE_CLIENT_ID', (string)(getenv('GOOGLE_CLIENT_ID') ?: ''));
 define('GOOGLE_CLIENT_SECRET', (string)(getenv('GOOGLE_CLIENT_SECRET') ?: ''));
 define('FIREBASE_WEB_API_KEY', (string)(getenv('FIREBASE_WEB_API_KEY') ?: ''));
 define('MAIL_FROM', (string)(getenv('MAIL_FROM') ?: ''));
+define('BREVO_API_KEY', (string)(getenv('BREVO_API_KEY') ?: ''));
