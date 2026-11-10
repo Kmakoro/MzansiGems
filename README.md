@@ -154,3 +154,19 @@ The complete outstanding test matrix and evidence to collect are in [docs/TEST_P
 ---
 
 **Project:** MzansiGems · **Audience:** South African residents and visitors discovering community-recommended places.
+
+## Task 3 final-review release notes (UNDEPLOYED, 10 November 2026)
+
+These updates are under review in [draft PR #14](https://github.com/Kmakoro/MzansiGems/pull/14). They have **not** been merged to main, deployed to HelioHost, installed on all phones or verified in production.
+
+- **Nationwide city discovery:** website Discover and Android categories include approved gems from new South African towns; users can type a town not in the suggestions.
+- **Post-approval moderation:** administrators can search for and edit already approved gems through the moderation dashboard.
+- **Login security:** one server-enforced password policy, legacy reset-required flow, and 15-minute login-guess throttle.
+- **Password recovery:** email delivery monitoring and optional authenticated transactional-mail provider; delivery must be configured and tested in Plesk.
+- **Android resilience:** better handling of incomplete API data, timeouts, and repeated save/reaction taps.
+- **Reduced API writes:** last-used token timestamp updates are throttled to reduce unnecessary database load.
+- **Tests:** automated API, password-policy and Android checks; real-hosting and physical-device verification pending.
+
+See [Task 3 submission and deployment guide](docs/TASK3_FINAL_SUBMISSION_GUIDE.md) and [lecturer feedback checklist](docs/FINAL_LECTURER_FEEDBACK_FIXES.md). These contain the evidence matrix, password-reset migration procedure, testing instructions and 502-hosting limitation.
+
+**Video walkthrough:** to be linked after the group records and uploads an unlisted, narrated demonstration. **Screenshots:** fresh labelled Android and website screenshots to be added after live verification. **Play Console evidence:** to be added after the signed release is prepared and uploaded, if applicable.
