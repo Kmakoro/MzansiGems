@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (mb_strlen($name) < 2) $errors[] = 'Full name must contain at least 2 characters.';
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Enter a valid email address.';
     if (!in_array($city, $cities, true)) $errors[] = 'Select a valid South African city.';
-    if (strlen($password) < 8) $errors[] = 'Password must contain at least 8 characters.';
+    if (($passwordError = password_policy_error($password)) !== null) $errors[] = $passwordError;
     if ($password !== $confirm) $errors[] = 'Passwords do not match.';
 
     if (!$errors) {
@@ -73,7 +73,7 @@ require __DIR__ . '/includes/header.php';
         <div class="form-group"><label for="full_name">Full Name</label><input class="form-control" id="full_name" name="full_name" value="<?= old('full_name') ?>" placeholder="Your name" required minlength="2"></div>
         <div class="form-group"><label for="email">Email Address</label><input class="form-control" id="email" name="email" type="email" value="<?= old('email') ?>" placeholder="you@example.com" required></div>
         <div class="form-group"><label for="city">Your City</label><select class="form-control" id="city" name="city" required><option value="">Select a city</option><?php foreach (['Cape Town','Johannesburg','Durban','Pretoria','Gqeberha','Bloemfontein','Polokwane','Mbombela','East London','Kimberley'] as $city): ?><option <?= old('city') === e($city) ? 'selected' : '' ?>><?= e($city) ?></option><?php endforeach; ?></select></div>
-        <div class="form-group"><label for="password">Password</label><input class="form-control" id="password" name="password" type="password" placeholder="Create a password" required minlength="8"></div>
+        <div class="form-group"><label for="password">Password</label><input class="form-control" id="password" name="password" type="password" placeholder="Create a password" required minlength="12"></div>
         <div class="form-group"><label for="confirm_password">Confirm Password</label><input class="form-control" id="confirm_password" name="confirm_password" type="password" placeholder="Confirm your password" required></div>
         <button class="btn btn-primary btn-block" type="submit">Create Account</button>
     </form>
