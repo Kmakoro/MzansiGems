@@ -213,6 +213,8 @@ fun MzansiGemApp(viewModel: AppViewModel) {
                             busy = state.busy,
                             serverOnline = state.serverOnline,
                             resetToken = state.resetToken,
+                            suspensionNotice = state.suspensionNotice,
+                            suspensionAppealUrl = state.suspensionAppealUrl,
                             siteName = state.siteName,
                             onBack = { navController.popBackStack() },
                             onLogin = viewModel::login,
@@ -220,6 +222,7 @@ fun MzansiGemApp(viewModel: AppViewModel) {
                             onForgotPassword = viewModel::forgotPassword,
                             onResetPassword = viewModel::apiResetPassword,
                             onDismissReset = { viewModel.setResetToken(null) },
+                            onDismissSuspension = viewModel::dismissSuspensionNotice,
                             onRegister = { navController.navigate(Routes.REGISTER) },
                         )
                     }
