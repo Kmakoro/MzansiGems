@@ -27,7 +27,7 @@ class AuthValidationTest {
 
     @Test fun shortRegistrationPasswordIsRejected() {
         assertEquals(
-            "Password must have at least 8 characters.",
+            "Password must have at least 12 characters.",
             AuthValidation.registrationError("Thandi Ndlovu", "thandi@example.com", "Johannesburg", "1234", "1234")
         )
     }
@@ -39,6 +39,10 @@ class AuthValidationTest {
                 "Thandi Ndlovu", "thandi@example.com", "Johannesburg", "Password123", "Password321"
             )
         )
+    }
+
+    @Test fun commonPasswordIsRejected() {
+        assertEquals("Choose a less common password.", AuthValidation.passwordResetError("password1234", "password1234"))
     }
 
     @Test fun resetPasswordValidationWorks() {
