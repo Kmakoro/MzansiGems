@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/auth_security.php';
+
 function url(string $path = ''): string
 {
     return APP_URL . ($path !== '' ? '/' . ltrim($path, '/') : '');
@@ -88,8 +90,9 @@ function current_user(): ?array
     $stmt = db()->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
     $stmt->execute([$id]);
     $user = $stmt->fetch();
-    if (!$user || $user['status'] !== 'active') {
-        unset($_SESSION['user_id']);
+    if (!$user || $user['status'] !== 'active' || !empty($user['must_reset_password'])
+        || (int)($_SESSION['auth_version'] ?? 0) !== (int)($user['auth_version'] ?? 0)) {
+        unset($_SESSION['user_id'], $_SESSION['auth_version']);
         return null;
     }
 
@@ -130,6 +133,7 @@ function login_user(array $user, bool $remember = false): void
 {
     session_regenerate_id(true);
     $_SESSION['user_id'] = (int)$user['id'];
+    $_SESSION['auth_version'] = (int)($user['auth_version'] ?? 0);
 
     if ($remember) {
         $selector = bin2hex(random_bytes(8));
@@ -160,8 +164,9 @@ function attempt_remember_login(): void
     $stmt = db()->prepare('SELECT rt.*, u.* FROM remember_tokens rt JOIN users u ON u.id = rt.user_id WHERE rt.selector = ? AND rt.expires_at > NOW() LIMIT 1');
     $stmt->execute([$selector]);
     $row = $stmt->fetch();
-    if ($row && hash_equals((string)$row['token_hash'], hash('sha256', $validator)) && $row['status'] === 'active') {
+    if ($row && hash_equals((string)$row['token_hash'], hash('sha256', $validator)) && $row['status'] === 'active' && empty($row['must_reset_password'])) {
         $_SESSION['user_id'] = (int)$row['user_id'];
+        $_SESSION['auth_version'] = (int)($row['auth_version'] ?? 0);
         session_regenerate_id(true);
     }
 }
