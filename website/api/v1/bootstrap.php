@@ -172,6 +172,9 @@ function api_require_admin(): array
 
 function api_issue_token(int $userId, string $name = 'Android app', int $days = 90): string
 {
+    $check = db()->prepare('SELECT must_reset_password FROM users WHERE id = ?');
+    $check->execute([$userId]);
+    if ((int)$check->fetchColumn() === 1) api_error(auth_reset_required_message(), 403, ['password' => 'PASSWORD_RESET_REQUIRED']);
     $plain = bin2hex(random_bytes(32));
     $stmt = db()->prepare('INSERT INTO api_tokens (user_id, token_hash, name, expires_at) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL ? DAY))');
     $stmt->execute([$userId, hash('sha256', $plain), mb_substr($name, 0, 100), $days]);
