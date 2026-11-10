@@ -26,6 +26,13 @@ try {
         check_suspension(str_contains($expected->getMessage(), 'reason'), 'A suspension reason is required');
     }
 
+    try {
+        suspension_update_user($userId, 'user', 'suspended', 'Bad', $adminId);
+        throw new RuntimeException('Uninformative one-word suspension reason was accepted.');
+    } catch (DomainException $expected) {
+        check_suspension(str_contains($expected->getMessage(), '10 characters'), 'Uninformative reasons are rejected');
+    }
+
     $pdo->prepare("INSERT INTO api_tokens (user_id,token_hash,name) VALUES (?,?,?)")
         ->execute([$userId, hash('sha256', 'ci-appeal-api'), 'CI token']);
     $pdo->prepare("INSERT INTO remember_tokens (user_id,selector,token_hash,expires_at) VALUES (?,?,?,DATE_ADD(NOW(), INTERVAL 1 DAY))")
