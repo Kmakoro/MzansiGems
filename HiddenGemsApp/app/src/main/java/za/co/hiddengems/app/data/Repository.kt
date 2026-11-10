@@ -3,6 +3,9 @@ package za.co.hiddengems.app.data
 import android.content.Context
 import android.net.Uri
 import com.google.gson.Gson
+import kotlinx.coroutines.CancellationException
+import java.net.SocketTimeoutException
+import java.io.IOException
 import com.google.gson.reflect.TypeToken
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -15,14 +18,20 @@ class HiddenGemsRepository(
     private val session: SessionManager,
     private val gson: Gson,
 ) {
-    private suspend fun <T> call(block: suspend () -> Response<ApiEnvelope<T>>): ApiResult<T> = try {
+    private suspend inline fun <reified T> call(noinline block: suspend () -> Response<ApiEnvelope<T>>): ApiResult<T> = try {
         val response = block()
         val body = response.body()
         if (response.isSuccessful && body?.success == true && body.data != null) {
             ApiResult.Success(body.data, body.message)
         } else if (response.isSuccessful && body?.success == true) {
-            @Suppress("UNCHECKED_CAST")
-            ApiResult.Success(Unit as T, body.message)
+            if (T::class == Unit::class) {
+                @Suppress("UNCHECKED_CAST")
+                ApiResult.Success(Unit as T, body.message)
+            } else {
+                ApiResult.Error("The server returned an incomplete response. Refresh before repeating the action.")
+            }
+        } else if (response.code() in 500..599) {
+            ApiResult.Error("Mzansi Gem is temporarily unavailable (server ${response.code()}). Refresh before repeating your action.")
         } else {
             val parsed = response.errorBody()?.string()?.let { raw ->
                 runCatching {
@@ -32,8 +41,15 @@ class HiddenGemsRepository(
             }
             ApiResult.Error(parsed?.message ?: body?.message ?: "Request failed (${response.code()}).", parsed?.errors.orEmpty())
         }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: SocketTimeoutException) {
+        ApiResult.Error("The server took too long to respond. Check your saved gems before trying the action again.")
+    } catch (e: IOException) {
+        ApiResult.Error("Unable to reach Mzansi Gem. Check your internet connection and try again.")
     } catch (e: Exception) {
-        ApiResult.Error(e.message ?: "Could not connect to the Mzansi Gem server.")
+        android.util.Log.e("MzansiGemApi", "API operation failed", e)
+        ApiResult.Error("Something went wrong while loading data. Please refresh and try again.")
     }
 
     suspend fun login(email: String, password: String): ApiResult<User> = when (val result = call { api.login(LoginRequest(email, password)) }) {
