@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (APP_ENV === 'development') {
                     $_SESSION['dev_verification_link'] = $verificationLink;
                 }
-                send_app_email($email, 'Verify your Mzansi Gem email', "Welcome to Mzansi Gem!
+                $verificationSent = send_app_email($email, 'Verify your Mzansi Gem email', "Welcome to Mzansi Gem!
 
 Verify your email address using either link:
 
@@ -53,7 +53,8 @@ Android app:
 {$appVerificationLink}
 
 These links expire in 24 hours.");
-                flash('success', 'Your account was created. Verify your email address before signing in.');
+                if (!$verificationSent) error_log('MzansiGems website registration verification delivery failed.');
+                flash($verificationSent ? 'success' : 'warning', $verificationSent ? 'Account created. Check your inbox for the verification message.' : 'Account created, but we could not dispatch a verification message. Please contact support or try Resend Link.');
                 redirect('verification-sent.php');
             }
             $stmt = db()->prepare('SELECT id,full_name,email,city,bio,role,status,level,points,password_hash,email_verified_at,notify_new_gems,notify_comments,notify_likes_saves,personalized_recommendations,show_saved_gems,show_activity_status,created_at,updated_at FROM users WHERE id = ?'); $stmt->execute([$userId]);
