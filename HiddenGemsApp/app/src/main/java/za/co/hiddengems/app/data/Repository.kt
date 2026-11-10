@@ -6,6 +6,7 @@ import com.google.gson.Gson
 import kotlinx.coroutines.CancellationException
 import java.net.SocketTimeoutException
 import java.io.IOException
+import java.io.ByteArrayOutputStream
 import com.google.gson.reflect.TypeToken
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -43,6 +44,8 @@ class HiddenGemsRepository(
         }
     } catch (e: CancellationException) {
         throw e
+    } catch (e: IllegalArgumentException) {
+        ApiResult.Error(e.message ?: "Please check the information you entered.")
     } catch (e: SocketTimeoutException) {
         ApiResult.Error("The server took too long to respond. Check your saved gems before trying the action again.")
     } catch (e: IOException) {
@@ -153,9 +156,26 @@ class HiddenGemsRepository(
 
     private fun imageParts(imageUris: List<Uri>): List<MultipartBody.Part> = imageUris.take(3).mapIndexedNotNull { index, uri ->
         val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
-        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@mapIndexedNotNull null
+        val maxPhotoBytes = 5 * 1024 * 1024
+        val bytes = context.contentResolver.openInputStream(uri)?.use { input ->
+            val output = ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            while (true) {
+                val n = input.read(buffer)
+                if (n < 0) break
+                if (output.size() + n > maxPhotoBytes) {
+                    throw IllegalArgumentException("Each photo must be 5 MB or smaller.")
+                }
+                output.write(buffer, 0, n)
+            }
+            output.toByteArray()
+        } ?: return@mapIndexedNotNull null
         val body = bytes.toRequestBody(mime.toMediaTypeOrNull())
-        val extension = when (mime) { "image/png" -> "png"; else -> "jpg" }
+        val extension = when (mime) {
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            else -> "jpg"
+        }
         MultipartBody.Part.createFormData("images[]", "hidden_gem_${index + 1}.$extension", body)
     }
 
