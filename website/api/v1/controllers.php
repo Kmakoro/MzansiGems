@@ -230,12 +230,18 @@ function api_verify_firebase_id_token(string $idToken): array
 
 function api_auth_forgot_password(): never
 {
+    if (!filter_var(MAIL_FROM, FILTER_VALIDATE_EMAIL)) {
+        api_error('Password reset email service is temporarily unavailable. Please contact support.', 503);
+    }
     $email = strtolower(trim((string)(api_input()['email'] ?? '')));
     if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $stmt = db()->prepare("SELECT id FROM users WHERE email = ? AND status = 'active' LIMIT 1");
         $stmt->execute([$email]);
         $userId = $stmt->fetchColumn();
         if ($userId) {
+            $limit = db()->prepare('SELECT COUNT(*) FROM password_resets WHERE user_id=? AND created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE)');
+            $limit->execute([(int)$userId]);
+            if ((int)$limit->fetchColumn() >= 3) api_response(null, 'If the account exists, password reset instructions will be sent when available.');
             $token = bin2hex(random_bytes(32));
             db()->prepare('DELETE FROM password_resets WHERE user_id = ? AND used_at IS NULL')->execute([(int)$userId]);
             db()->prepare('INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))')
