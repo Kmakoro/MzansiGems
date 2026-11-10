@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS gem_images;
 DROP TABLE IF EXISTS gems;
 DROP TABLE IF EXISTS password_resets;
+DROP TABLE IF EXISTS login_throttles;
 DROP TABLE IF EXISTS email_verification_tokens;
 DROP TABLE IF EXISTS api_tokens;
 DROP TABLE IF EXISTS remember_tokens;
@@ -25,6 +26,8 @@ CREATE TABLE users (
     firebase_uid VARCHAR(128) NULL UNIQUE,
     city VARCHAR(100) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    must_reset_password TINYINT(1) NOT NULL DEFAULT 0,
+    auth_version INT UNSIGNED NOT NULL DEFAULT 1,
     email_verified_at DATETIME NULL,
     bio VARCHAR(300) NULL,
     role ENUM('user','admin') NOT NULL DEFAULT 'user',
@@ -76,6 +79,13 @@ CREATE TABLE api_tokens (
     CONSTRAINT fk_api_token_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_api_token_user (user_id),
     INDEX idx_api_token_expiry (expires_at)
+) ENGINE=InnoDB;
+
+CREATE TABLE login_throttles (
+    bucket_key CHAR(64) PRIMARY KEY,
+    attempts INT UNSIGNED NOT NULL DEFAULT 0,
+    window_started DATETIME NOT NULL,
+    INDEX idx_login_window (window_started)
 ) ENGINE=InnoDB;
 
 CREATE TABLE password_resets (
