@@ -17,7 +17,7 @@ function api_auth_register(): never
     if (mb_strlen($name) < 2 || mb_strlen($name) > 100) $errors['full_name'] = 'Full name must be 2 to 100 characters.';
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors['email'] = 'Enter a valid email address.';
     if ($city === '' || !in_array($city, $cities, true)) $errors['city'] = 'Select a valid South African city.';
-    if (mb_strlen($password) < 8) $errors['password'] = 'Password must be at least 8 characters.';
+    if (($passwordError = password_policy_error($password)) !== null) $errors['password'] = $passwordError;
     if ($password !== $confirmation) $errors['confirm_password'] = 'Passwords do not match.';
     $stmt = db()->prepare('SELECT 1 FROM users WHERE email = ?');
     $stmt->execute([$email]);
@@ -69,6 +69,10 @@ function api_auth_login(): never
     $user = $stmt->fetch();
     if (!$user || !password_verify($password, (string)$user['password_hash'])) {
         api_error('The email address or password is incorrect.', 401);
+    }
+    if (password_upgrade_required($password)) {
+        revoke_weak_password_sessions((int)$user['id']);
+        api_error('Your password no longer meets our security requirements. Please use Forgot password to reset it before signing in.', 403, ['code' => 'PASSWORD_RESET_REQUIRED']);
     }
     if ($user['status'] !== 'active') {
         api_error('This account is suspended.', 403);
@@ -278,7 +282,7 @@ function api_auth_reset_password(): never
     $password = (string)($input['password'] ?? '');
     $confirm = (string)($input['confirm_password'] ?? '');
     if ($token === '') api_error('Reset token is required.', 422);
-    if (mb_strlen($password) < 8) api_error('Password must be at least 8 characters.', 422);
+    if (($passwordError = password_policy_error($password)) !== null) api_error($passwordError, 422);
     if ($password !== $confirm) api_error('Passwords do not match.', 422);
     $stmt = db()->prepare('SELECT user_id, id FROM password_resets WHERE token_hash = ? AND expires_at > NOW() AND used_at IS NULL ORDER BY id DESC LIMIT 1');
     $stmt->execute([hash('sha256', $token)]);
@@ -289,7 +293,7 @@ function api_auth_reset_password(): never
     try {
         db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?')->execute([password_hash($password, PASSWORD_DEFAULT), $userId]);
         db()->prepare('UPDATE password_resets SET used_at = NOW() WHERE id = ?')->execute([(int)$record['id']]);
-        db()->prepare('DELETE FROM api_tokens WHERE user_id = ?')->execute([$userId]);
+        revoke_weak_password_sessions($userId);
         db()->commit();
     } catch (Throwable $e) {
         if (db()->inTransaction()) db()->rollBack();
@@ -724,7 +728,7 @@ function api_profile_password(): never
     $password = (string)($input['password'] ?? '');
     $confirm = (string)($input['confirm_password'] ?? '');
     if (!password_verify($current, (string)$user['password_hash'])) api_error('Current password is incorrect.', 422);
-    if (mb_strlen($password) < 8) api_error('New password must be at least 8 characters.', 422);
+    if (($passwordError = password_policy_error($password)) !== null) api_error($passwordError, 422);
     if ($password !== $confirm) api_error('New passwords do not match.', 422);
     db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?')->execute([password_hash($password, PASSWORD_DEFAULT), (int)$user['id']]);
     db()->prepare('DELETE FROM api_tokens WHERE user_id = ? AND id <> ?')->execute([(int)$user['id'], (int)(api_token_record()['token_id'] ?? 0)]);
