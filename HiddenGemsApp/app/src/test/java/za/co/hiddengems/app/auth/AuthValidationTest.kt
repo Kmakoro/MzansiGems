@@ -43,7 +43,7 @@ class AuthValidationTest {
 
     @Test fun longPassphrasesAreAccepted() {
         assertNull(AuthValidation.newPasswordError("Quiet-coffee-river-moon7!"))
-        assertNull(AuthValidation.newPasswordError("V7#mQ2!zR9@pL4$s"))
+        assertNull(AuthValidation.newPasswordError("V7#mQ2!zR9@pL4\$s"))
     }
 
     @Test fun eachCharacterTypeIsMandatory() {
