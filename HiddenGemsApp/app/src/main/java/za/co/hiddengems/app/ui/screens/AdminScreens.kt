@@ -405,7 +405,10 @@ private fun AdminAppeals(
                                 minLines = 2,
                                 modifier = Modifier.fillMaxWidth(),
                             )
-                            Button(onClick = { confirmReinstate = true }) {
+                            Button(
+                                enabled = finalMessage.isBlank() || finalMessage.trim().length in 10..2000,
+                                onClick = { confirmReinstate = true },
+                            ) {
                                 Text("Reinstate account")
                             }
                         } else {
