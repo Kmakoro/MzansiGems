@@ -317,7 +317,7 @@ fun SettingsScreen(
                     OutlinedTextField(currentPassword, { currentPassword = it }, label = { Text("Current password") }, visualTransformation = PasswordVisualTransformation())
                     OutlinedTextField(password, { password = it }, label = { Text("New password") }, visualTransformation = PasswordVisualTransformation())
                     OutlinedTextField(confirm, { confirm = it }, label = { Text("Confirm new password") }, visualTransformation = PasswordVisualTransformation())
-                    Text("Use at least 15 characters; avoid common or predictable passwords.", style = MaterialTheme.typography.bodySmall)
+                    Text("Use 15+ characters with uppercase, lowercase, a number and a symbol (!@#$%^&*).", style = MaterialTheme.typography.bodySmall)
                     if (passwordError.isNotBlank()) Text(passwordError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
             },
