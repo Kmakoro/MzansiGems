@@ -215,6 +215,9 @@ jobs:
       - name: Test password strength policy
         run: php website/tests/password_policy_test.php
 
+      - name: Test website login rate limiting
+        run: php website/tests/login_throttle_test.php
+
       # Reuse the mysql:8.0 service container's bundled client instead of
       # downloading a second client from Ubuntu package mirrors.
       - name: Verify MySQL client in service container
