@@ -271,7 +271,7 @@ fun LoginScreen(
                 // Website uses a separate, restricted session for suspension appeals.
                 // Never issue a normal Android API token to suspended accounts.
                 val websiteBase = BuildConfig.API_BASE_URL.substringBefore("/api/v1").trimEnd('/')
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("$"+"{websiteBase}/login.php")))
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("${websiteBase}/login.php")))
             },
             modifier = Modifier.fillMaxWidth(),
         ) {
