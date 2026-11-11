@@ -150,6 +150,7 @@ The complete outstanding test matrix and evidence to collect are in [docs/TEST_P
 - [Verification plan](docs/TEST_PLAN.md)
 - [Submission checklist](docs/FINAL_SUBMISSION_CHECKLIST.md)
 - [Task 2 compliance mapping](TASK2_COMPLIANCE.md)
+- [Task 3 update and lecturer feedback response (12 November 2026)](docs/TASK3_UPDATE_AND_FEEDBACK_2026-11-12.md)
 
 ---
 
