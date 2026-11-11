@@ -212,6 +212,9 @@ jobs:
         run: |
           find website -type f -name '*.php' -print0 | xargs -0 -n1 php -l
 
+      - name: Test password strength policy
+        run: php website/tests/password_policy_test.php
+
       # Reuse the mysql:8.0 service container's bundled client instead of
       # downloading a second client from Ubuntu package mirrors.
       - name: Verify MySQL client in service container

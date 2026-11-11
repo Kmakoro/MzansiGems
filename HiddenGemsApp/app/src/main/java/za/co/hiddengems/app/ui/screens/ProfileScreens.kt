@@ -62,6 +62,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import za.co.hiddengems.app.auth.AuthValidation
 import za.co.hiddengems.app.data.Preferences
 import za.co.hiddengems.app.ui.AppUiState
 import za.co.hiddengems.app.ui.components.GemCard
@@ -255,6 +256,7 @@ fun SettingsScreen(
     var password by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var showPasswordDialog by remember { mutableStateOf(false) }
+    var passwordError by remember { mutableStateOf("") }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var deletePassword by remember { mutableStateOf("") }
 
@@ -315,12 +317,17 @@ fun SettingsScreen(
                     OutlinedTextField(currentPassword, { currentPassword = it }, label = { Text("Current password") }, visualTransformation = PasswordVisualTransformation())
                     OutlinedTextField(password, { password = it }, label = { Text("New password") }, visualTransformation = PasswordVisualTransformation())
                     OutlinedTextField(confirm, { confirm = it }, label = { Text("Confirm new password") }, visualTransformation = PasswordVisualTransformation())
+                    Text("Use at least 15 characters; avoid common or predictable passwords.", style = MaterialTheme.typography.bodySmall)
+                    if (passwordError.isNotBlank()) Text(passwordError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
             },
             confirmButton = {
                 Button(onClick = {
-                    onChangePassword(currentPassword, password, confirm)
-                    currentPassword = ""; password = ""; confirm = ""; showPasswordDialog = false
+                    passwordError = if (currentPassword.isBlank()) "Enter your current password." else AuthValidation.passwordResetError(password, confirm).orEmpty()
+                    if (passwordError.isBlank()) {
+                        onChangePassword(currentPassword, password, confirm)
+                        currentPassword = ""; password = ""; confirm = ""; showPasswordDialog = false
+                    }
                 }) { Text("Update") }
             },
             dismissButton = { TextButton(onClick = { showPasswordDialog = false }) { Text("Cancel") } },

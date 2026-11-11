@@ -10,6 +10,32 @@ object AuthValidation {
         else -> null
     }
 
+    /**
+     * Mirrors the website's creation policy. Existing passwords are still accepted on login.
+     */
+    fun newPasswordError(password: String): String? {
+        if (password.codePointCount(0, password.length) < 15) {
+            return "Password must have at least 15 characters."
+        }
+        if (password.toByteArray(Charsets.UTF_8).size > 4096) return "Password is too long."
+
+        val normalized = password.lowercase().filter { it.isLetterOrDigit() }
+        val common = setOf(
+            "password", "password123", "password12345678", "passwordpassword",
+            "12345678", "123456789", "1234567890", "qwerty", "qwerty123",
+            "qwertyuiop", "letmein", "welcome", "admin", "administrator",
+            "iloveyou", "mzansigems", "hiddengems", "correcthorsebatterystaple",
+        )
+        if (normalized in common ||
+            Regex("^(?:password|welcome|admin|mzansigems|hiddengems)[0-9]*$").matches(normalized) ||
+            Regex("^(.{1,8})\\1+$").matches(normalized) ||
+            listOf("12345678", "87654321", "abcdefgh", "qwertyui").any { it in normalized }
+        ) {
+            return "Choose a less predictable password; avoid common passwords, sequences, and repeated patterns."
+        }
+        return null
+    }
+
     fun registrationError(
         name: String,
         email: String,
@@ -20,13 +46,13 @@ object AuthValidation {
         name.trim().length < 2 -> "Full name must have at least 2 characters."
         !emailPattern.matches(email.trim()) -> "Enter a valid email address."
         city.isBlank() -> "City is required."
-        password.length < 8 -> "Password must have at least 8 characters."
+        newPasswordError(password) != null -> newPasswordError(password)
         password != confirmPassword -> "Passwords do not match."
         else -> null
     }
 
     fun passwordResetError(password: String, confirmPassword: String): String? = when {
-        password.length < 8 -> "Password must have at least 8 characters."
+        newPasswordError(password) != null -> newPasswordError(password)
         password != confirmPassword -> "Passwords do not match."
         else -> null
     }
