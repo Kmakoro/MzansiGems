@@ -2,6 +2,8 @@ package za.co.hiddengems.app.data
 
 import android.content.Context
 import android.net.Uri
+import java.io.IOException
+import kotlinx.coroutines.CancellationException
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -32,8 +34,16 @@ class HiddenGemsRepository(
             }
             ApiResult.Error(parsed?.message ?: body?.message ?: "Request failed (${response.code()}).", parsed?.errors.orEmpty())
         }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: IOException) {
+        // DNS, connection, and timeout failures should never leak technical messages to users.
+        ApiResult.Error(
+            "You're offline. Check your internet connection and try again.",
+            isNetworkError = true,
+        )
     } catch (e: Exception) {
-        ApiResult.Error(e.message ?: "Could not connect to the Mzansi Gem server.")
+        ApiResult.Error("Something went wrong. Please try again.")
     }
 
     suspend fun login(email: String, password: String): ApiResult<User> = when (val result = call { api.login(LoginRequest(email, password)) }) {
