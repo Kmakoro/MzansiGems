@@ -212,16 +212,16 @@ jobs:
         run: |
           find website -type f -name '*.php' -print0 | xargs -0 -n1 php -l
 
-      - name: Install MySQL client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y default-mysql-client
+      # Reuse the mysql:8.0 service container's bundled client instead of
+      # downloading a second client from Ubuntu package mirrors.
+      - name: Verify MySQL client in service container
+        run: docker exec "${{ job.services.mysql.id }}" mysql --version
 
       - name: Create and seed test database
         env:
           MYSQL_PWD: root
         run: |
-          mysql -h 127.0.0.1 -P 3306 -uroot < website/database/install.sql
+          docker exec -i -e MYSQL_PWD=root "${{ job.services.mysql.id }}" mysql -uroot < website/database/install.sql
 
       - name: Check PHP database table presence without changing data
         env:
@@ -256,7 +256,7 @@ jobs:
           )
 
           for table in "${tables[@]}"; do
-            count=$(mysql -h 127.0.0.1 -P 3306 -uroot -Nse "SELECT COUNT(*) FROM hidden_gems.${table};")
+            count=$(docker exec -e MYSQL_PWD=root "${{ job.services.mysql.id }}" mysql -uroot -Nse "SELECT COUNT(*) FROM hidden_gems.${table};")
             echo "${table}: ${count} records"
             if [ "${count}" -lt 10 ]; then
               echo "::error::${table} has only ${count} records; Task 2 requires at least 10."
@@ -308,4 +308,4 @@ jobs:
         env:
           MYSQL_PWD: root
         run: |
-          mysql -h 127.0.0.1 -P 3306 -uroot -Nse             "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='hidden_gems' AND TABLE_NAME='users' AND COLUMN_NAME='firebase_uid';"             | grep -qx firebase_uid
+          docker exec -e MYSQL_PWD=root "${{ job.services.mysql.id }}" mysql -uroot -Nse             "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='hidden_gems' AND TABLE_NAME='users' AND COLUMN_NAME='firebase_uid';"             | grep -qx firebase_uid

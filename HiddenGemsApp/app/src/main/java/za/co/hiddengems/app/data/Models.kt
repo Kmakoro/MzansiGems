@@ -248,7 +248,39 @@ data class ModerationRequest(
     val status: String,
     @SerializedName("rejection_reason") val rejectionReason: String = "",
 )
-data class AdminUserRequest(val role: String, val status: String)
+data class AdminUserRequest(
+    val role: String,
+    val status: String,
+    @SerializedName("suspension_reason") val suspensionReason: String = "",
+)
+
+data class SuspensionCase(
+    val id: Int,
+    @SerializedName("user_id") val userId: Int = 0,
+    @SerializedName("full_name") val fullName: String = "",
+    val email: String = "",
+    @SerializedName("user_status") val userStatus: String = "",
+    val status: String = "open",
+    val reason: String = "",
+    @SerializedName("message_count") val messageCount: Int = 0,
+    @SerializedName("updated_at") val updatedAt: String = "",
+)
+
+data class SuspensionMessage(
+    val role: String = "member",
+    val message: String = "",
+    @SerializedName("created_at") val createdAt: String = "",
+)
+
+data class SuspensionCaseThread(
+    @SerializedName("case") val appealCase: SuspensionCase,
+    val messages: List<SuspensionMessage> = emptyList(),
+)
+
+data class SuspensionReplyRequest(val message: String)
+data class SuspensionReinstateRequest(
+    @SerializedName("resolution_message") val resolutionMessage: String = "",
+)
 data class ReportResolutionRequest(
     val status: String,
     @SerializedName("resolution_note") val resolutionNote: String = "",

@@ -25,6 +25,7 @@ $flashes = pull_flashes();
         <nav>
             <a class="<?= $activeAdmin === 'dashboard' ? 'active' : '' ?>" href="<?= url('admin/index.php') ?>"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
             <a class="<?= $activeAdmin === 'users' ? 'active' : '' ?>" href="<?= url('admin/users.php') ?>"><i class="bi bi-people-fill"></i> User Management</a>
+            <a class="<?= $activeAdmin === 'appeals' ? 'active' : '' ?>" href="<?= url('admin/appeals.php') ?>"><i class="bi bi-chat-left-text-fill"></i> Suspension Appeals</a>
             <a class="<?= $activeAdmin === 'moderation' ? 'active' : '' ?>" href="<?= url('admin/moderation.php') ?>"><i class="bi bi-shield-check"></i> Content Moderation</a>
             <a class="<?= $activeAdmin === 'analytics' ? 'active' : '' ?>" href="<?= url('admin/analytics.php') ?>"><i class="bi bi-bar-chart-line-fill"></i> Analytics</a>
             <a class="<?= $activeAdmin === 'settings' ? 'active' : '' ?>" href="<?= url('admin/settings.php') ?>"><i class="bi bi-gear-fill"></i> Settings</a>
