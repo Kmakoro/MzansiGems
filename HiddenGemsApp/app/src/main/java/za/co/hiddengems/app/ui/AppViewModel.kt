@@ -25,6 +25,8 @@ import za.co.hiddengems.app.data.GemDraft
 import za.co.hiddengems.app.data.HiddenGemsRepository
 import za.co.hiddengems.app.data.Preferences
 import za.co.hiddengems.app.data.Review
+import za.co.hiddengems.app.data.SuspensionCase
+import za.co.hiddengems.app.data.SuspensionCaseThread
 import za.co.hiddengems.app.data.SessionManager
 import za.co.hiddengems.app.data.User
 
@@ -42,6 +44,8 @@ data class AppUiState(
     val adminDashboard: AdminDashboard? = null,
     val adminModeration: ModerationPayload = ModerationPayload(),
     val adminUsers: List<User> = emptyList(),
+    val adminAppeals: List<SuspensionCase> = emptyList(),
+    val selectedAppeal: SuspensionCaseThread? = null,
     val adminAnalytics: AdminAnalytics? = null,
     val adminSettings: Map<String, String> = emptyMap(),
     val siteName: String = "Mzansi Gem",
@@ -563,16 +567,30 @@ class AppViewModel(
                 val users = repository.adminUsers()
                 val analytics = repository.adminAnalytics()
                 val settings = repository.adminSettings()
+                val appeals = repository.adminAppeals()
                 if (dashboard is ApiResult.Success) _state.update { it.copy(adminDashboard = dashboard.value) }
                 if (moderation is ApiResult.Success) _state.update { it.copy(adminModeration = moderation.value) }
                 if (users is ApiResult.Success) _state.update { it.copy(adminUsers = users.value) }
                 if (analytics is ApiResult.Success) _state.update { it.copy(adminAnalytics = analytics.value) }
+                if (appeals is ApiResult.Success) {
+                    _state.update { it.copy(adminAppeals = appeals.value) }
+                    val previousId = _state.value.selectedAppeal?.appealCase?.id
+                    val selected = appeals.value.firstOrNull { it.id == previousId } ?: appeals.value.firstOrNull()
+                    if (selected == null) {
+                        _state.update { it.copy(selectedAppeal = null) }
+                    } else {
+                        when (val thread = repository.adminAppealThread(selected.id)) {
+                            is ApiResult.Success -> _state.update { it.copy(selectedAppeal = thread.value) }
+                            is ApiResult.Error -> _events.emit(UiEvent.Message(thread.message))
+                        }
+                    }
+                }
                 if (settings is ApiResult.Success) {
                     val name = settings.value["site_name"]
                     if (!name.isNullOrBlank()) session.saveSiteName(name)
                     _state.update { it.copy(adminSettings = settings.value) }
                 }
-                listOf(dashboard, moderation, users, analytics, settings).filterIsInstance<ApiResult.Error>().firstOrNull()?.let {
+                listOf(dashboard, moderation, users, analytics, settings, appeals).filterIsInstance<ApiResult.Error>().firstOrNull()?.let {
                     _events.emit(UiEvent.Message(it.message))
                 }
                 _state.update { it.copy(busy = false) }
@@ -613,11 +631,38 @@ class AppViewModel(
         }
     }
 
-    fun updateAdminUser(id: Int, role: String, status: String) = launchBusy {
-        when (val result = repository.updateAdminUser(id, role, status)) {
+    fun updateAdminUser(id: Int, role: String, status: String, reason: String) = launchBusy {
+        when (val result = repository.updateAdminUser(id, role, status, reason.trim())) {
             is ApiResult.Success -> {
-                _state.update { s -> s.copy(adminUsers = s.adminUsers.map { if (it.id == id) result.value else it }) }
+                _events.emit(UiEvent.Message(result.message.ifBlank { "Account updated." }))
+                loadAdmin()
+            }
+            is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
+        }
+    }
+
+    fun selectAdminAppeal(id: Int) = launchBusy {
+        when (val result = repository.adminAppealThread(id)) {
+            is ApiResult.Success -> _state.update { it.copy(selectedAppeal = result.value) }
+            is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
+        }
+    }
+
+    fun replyToAdminAppeal(id: Int, message: String) = launchBusy {
+        when (val result = repository.replyToAppeal(id, message.trim())) {
+            is ApiResult.Success -> {
                 _events.emit(UiEvent.Message(result.message))
+                loadAdmin()
+            }
+            is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
+        }
+    }
+
+    fun reinstateAdminAppeal(id: Int, finalMessage: String) = launchBusy {
+        when (val result = repository.reinstateAppeal(id, finalMessage.trim())) {
+            is ApiResult.Success -> {
+                _events.emit(UiEvent.Message(result.message))
+                loadAdmin()
             }
             is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
         }
