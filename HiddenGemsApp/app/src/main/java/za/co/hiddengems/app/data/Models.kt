@@ -101,7 +101,21 @@ data class Gem(
     val reviews: List<Review> = emptyList(),
     @SerializedName("created_at") val createdAt: String = "",
     @SerializedName("updated_at") val updatedAt: String = "",
-)
+) {
+    // The list API omits detail-only fields such as personal_note, images and reviews.
+    // Gson otherwise creates this Kotlin data class without running its defaults,
+    // leaving those non-null fields null and causing copy() to crash on like/save.
+    constructor() : this(
+        id = 0,
+        userId = 0,
+        title = "",
+        description = "",
+        location = "",
+        city = "",
+        budgetLevel = "",
+        activityType = "",
+    )
+}
 
 data class Review(
     val id: Int,
