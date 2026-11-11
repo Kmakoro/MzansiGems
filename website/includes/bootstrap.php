@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/config/config.php';
 require_once dirname(__DIR__) . '/config/database.php';
 require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/password_policy.php';
 require_once __DIR__ . '/suspensions.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
