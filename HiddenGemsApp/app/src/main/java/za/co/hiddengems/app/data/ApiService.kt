@@ -157,6 +157,24 @@ interface HiddenGemsApi {
     @PATCH("admin/users/{id}")
     suspend fun updateAdminUser(@Path("id") id: Int, @Body request: AdminUserRequest): Response<ApiEnvelope<User>>
 
+    @GET("admin/appeals")
+    suspend fun adminAppeals(): Response<ApiEnvelope<List<SuspensionCase>>>
+
+    @GET("admin/appeals/{id}")
+    suspend fun adminAppealThread(@Path("id") id: Int): Response<ApiEnvelope<SuspensionCaseThread>>
+
+    @POST("admin/appeals/{id}/reply")
+    suspend fun adminAppealReply(
+        @Path("id") id: Int,
+        @Body request: SuspensionReplyRequest,
+    ): Response<ApiEnvelope<Unit>>
+
+    @POST("admin/appeals/{id}/reinstate")
+    suspend fun adminAppealReinstate(
+        @Path("id") id: Int,
+        @Body request: SuspensionReinstateRequest,
+    ): Response<ApiEnvelope<Unit>>
+
     @GET("admin/moderation")
     suspend fun adminModeration(): Response<ApiEnvelope<ModerationPayload>>
 
