@@ -5,16 +5,22 @@ require_once dirname(__DIR__) . '/includes/password_policy.php';
 
 $rejected = [
     '12345678',
+    '1122334455667788',
     '123456789012345',
     'Password12345678!',
     'aaaaaaaaaaaaaaaa',
     'passwordpassword',
     'qwertyuiopasdfgh',
+    'ALLUPPERCASE123!', // No lowercase
+    'alllowercase123!', // No uppercase
+    'NoNumbersHere!!', // No number
+    'NoSymbolsHere123', // No allowed symbol
+    'Aa!1122334455667788', // Predictable digits despite character variety
 ];
 $accepted = [
     'River Moon Lantern 92!',
-    'quiet-coffee-river-moon',
-    'Forest meadow after rain',
+    'Quiet-coffee-river-moon7!',
+    'V7#mQ2!zR9@pL4$s',
 ];
 
 foreach ($rejected as $password) {

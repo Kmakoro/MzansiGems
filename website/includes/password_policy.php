@@ -14,6 +14,19 @@ function password_policy_error(string $password): ?string
         return 'Password is too long.';
     }
 
+    // Require all four character types in newly created passwords.
+    if (!preg_match('/[A-Z]/', $password)
+        || !preg_match('/[a-z]/', $password)
+        || !preg_match('/[0-9]/', $password)
+        || !preg_match('/[!@#$%^&*]/', $password)) {
+        return 'Password must include uppercase (A-Z), lowercase (a-z), a number (0-9), and a symbol (!@#$%^&*).';
+    }
+
+    // Reject obvious paired-digit runs even when surrounded by other characters.
+    if (preg_match('/(?:00|11|22|33|44|55|66|77|88|99){4,}/', $password)) {
+        return 'Choose a less predictable password; avoid common passwords, sequences, and repeated patterns.';
+    }
+
     // Normalize only for comparison. Never change the actual password before hashing.
     $compact = preg_replace('/[^\p{L}\p{N}]/u', '', $password);
     $normalized = strtolower($compact ?? $password);

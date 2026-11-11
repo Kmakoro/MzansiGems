@@ -19,6 +19,17 @@ object AuthValidation {
         }
         if (password.toByteArray(Charsets.UTF_8).size > 4096) return "Password is too long."
 
+        val hasUppercase = password.any { it in 'A'..'Z' }
+        val hasLowercase = password.any { it in 'a'..'z' }
+        val hasDigit = password.any { it in '0'..'9' }
+        val hasSymbol = password.any { it in "!@#$%^&*" }
+        if (!hasUppercase || !hasLowercase || !hasDigit || !hasSymbol) {
+            return "Password must include uppercase (A-Z), lowercase (a-z), a number (0-9), and a symbol (!@#$%^&*)."
+        }
+        if (Regex("(?:00|11|22|33|44|55|66|77|88|99){4,}").containsMatchIn(password)) {
+            return "Choose a less predictable password; avoid common passwords, sequences, and repeated patterns."
+        }
+
         val normalized = password.lowercase().filter { it.isLetterOrDigit() }
         val common = setOf(
             "password", "password123", "password12345678", "passwordpassword",

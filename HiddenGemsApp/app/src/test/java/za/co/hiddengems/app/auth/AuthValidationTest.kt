@@ -36,13 +36,27 @@ class AuthValidationTest {
 
     @Test fun predictablePasswordsAreRejected() {
         val error = "Choose a less predictable password; avoid common passwords, sequences, and repeated patterns."
-        for (password in listOf("123456789012345", "Password12345678!", "aaaaaaaaaaaaaaaa")) {
+        for (password in listOf("Password12345678!", "Aa!1122334455667788", "Aa1!Aa1!Aa1!Aa1!")) {
             assertEquals(error, AuthValidation.newPasswordError(password))
         }
     }
 
     @Test fun longPassphrasesAreAccepted() {
-        assertNull(AuthValidation.newPasswordError("quiet-coffee-river-moon"))
+        assertNull(AuthValidation.newPasswordError("Quiet-coffee-river-moon7!"))
+        assertNull(AuthValidation.newPasswordError("V7#mQ2!zR9@pL4\$s"))
+    }
+
+    @Test fun eachCharacterTypeIsMandatory() {
+        val message = "Password must include uppercase (A-Z), lowercase (a-z), a number (0-9), and a symbol (!@#$%^&*)."
+        for (password in listOf(
+            "1122334455667788", // only numbers, even with 16 characters
+            "ALLUPPERCASE123!", // no lowercase
+            "alllowercase123!", // no uppercase
+            "NoNumbersHere!!", // no number
+            "NoSymbolsHere123", // no symbol
+        )) {
+            assertEquals(message, AuthValidation.newPasswordError(password))
+        }
     }
 
     @Test fun mismatchedRegistrationPasswordsAreRejected() {

@@ -137,7 +137,7 @@ fun LoginScreen(
         
         if (resetToken != null) {
             Text("Reset Password", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-            Text("Use at least 15 characters; avoid common or predictable passwords.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Use 15+ characters with uppercase, lowercase, a number and a symbol (!@#$%^&*).", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(22.dp))
             OutlinedTextField(
                 value = newPassword,
@@ -408,7 +408,7 @@ fun RegisterScreen(
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(6.dp))
-        Text("Use at least 15 characters; avoid common passwords and sequences.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+        Text("Use 15+ characters with uppercase, lowercase, a number and a symbol (!@#$%^&*).", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(10.dp))
         OutlinedTextField(
             value = confirm,

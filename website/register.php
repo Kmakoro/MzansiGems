@@ -74,7 +74,7 @@ require __DIR__ . '/includes/header.php';
         <div class="form-group"><label for="email">Email Address</label><input class="form-control" id="email" name="email" type="email" value="<?= old('email') ?>" placeholder="you@example.com" required></div>
         <div class="form-group"><label for="city">Your City</label><select class="form-control" id="city" name="city" required><option value="">Select a city</option><?php foreach (['Cape Town','Johannesburg','Durban','Pretoria','Gqeberha','Bloemfontein','Polokwane','Mbombela','East London','Kimberley'] as $city): ?><option <?= old('city') === e($city) ? 'selected' : '' ?>><?= e($city) ?></option><?php endforeach; ?></select></div>
         <div class="form-group"><label for="password">Password</label><input class="form-control" id="password" name="password" type="password" placeholder="Use 15+ characters" required minlength="15"></div>
-        <p class="form-help">Use at least 15 characters. Avoid common passwords and predictable sequences.</p>
+        <p class="form-help">Use 15+ characters with uppercase (A-Z), lowercase (a-z), a number (0-9) and a symbol (!@#$%^&*). Avoid predictable patterns.</p>
         <div class="form-group"><label for="confirm_password">Confirm Password</label><input class="form-control" id="confirm_password" name="confirm_password" type="password" placeholder="Confirm your password" required></div>
         <button class="btn btn-primary btn-block" type="submit">Create Account</button>
     </form>
