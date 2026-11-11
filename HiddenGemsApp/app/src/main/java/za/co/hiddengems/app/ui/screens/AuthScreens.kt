@@ -1,6 +1,8 @@
 package za.co.hiddengems.app.ui.screens
 
 import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.gms.common.api.ApiException
@@ -69,6 +71,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import za.co.hiddengems.app.BuildConfig
 import za.co.hiddengems.app.R
 import za.co.hiddengems.app.auth.AuthValidation
 import za.co.hiddengems.app.auth.FirebaseGoogleSignIn
@@ -262,6 +265,19 @@ fun LoginScreen(
             }
         }
         
+        Spacer(Modifier.height(10.dp))
+        TextButton(
+            onClick = {
+                // Website uses a separate, restricted session for suspension appeals.
+                // Never issue a normal Android API token to suspended accounts.
+                val websiteBase = BuildConfig.API_BASE_URL.substringBefore("/api/v1").trimEnd('/')
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("$"+"{websiteBase}/login.php")))
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Account suspended? Open your appeal on the website")
+        }
+
         Spacer(Modifier.height(14.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
             Text("Don't have an account?")
