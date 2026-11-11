@@ -256,6 +256,9 @@ fun MzansiGemApp(viewModel: AppViewModel) {
                             onModerateReview = viewModel::moderateReview,
                             onResolveReport = viewModel::resolveReport,
                             onUpdateUser = viewModel::updateAdminUser,
+                            onSelectAppeal = viewModel::selectAdminAppeal,
+                            onReplyToAppeal = viewModel::replyToAdminAppeal,
+                            onReinstateAppeal = viewModel::reinstateAdminAppeal,
                             onSaveSettings = viewModel::updateAdminSettings,
                         )
                     }
