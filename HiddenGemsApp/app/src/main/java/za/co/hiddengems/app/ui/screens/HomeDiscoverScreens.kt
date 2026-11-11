@@ -32,6 +32,9 @@ import androidx.compose.material.icons.filled.LocalBar
 import androidx.compose.material.icons.filled.Museum
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.WifiOff
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -91,6 +94,7 @@ fun HomeScreen(
     onLogin: () -> Unit,
     onRegister: () -> Unit,
     onShare: () -> Unit,
+    onRetry: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     LazyColumn(
@@ -200,6 +204,16 @@ fun HomeScreen(
             }
         }
         item { SectionTitle("Featured Mzansi Gems", "Community favourites") }
+        if (state.gemsLoadError != null) {
+            item {
+                GemsLoadFailure(
+                    message = state.gemsLoadError,
+                    isOffline = state.gemsOffline,
+                    onRetry = onRetry,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+        }
         items(state.gems.take(6), key = { it.id }) { gem ->
             GemCard(
                 gem = gem,
@@ -243,6 +257,7 @@ fun DiscoverScreen(
     onGem: (Int) -> Unit,
     onLike: (Int) -> Unit,
     onSave: (Int) -> Unit,
+    onRetry: () -> Unit,
 ) {
     var query by remember(state.query) { mutableStateOf(state.query) }
     var city by remember(state.city) { mutableStateOf(state.city) }
@@ -284,10 +299,20 @@ fun DiscoverScreen(
                 item { FilterMenu("Sort", sort, listOf("recommended", "rating", "popular", "newest"), allowEmpty = false) { sort = it; apply() } }
             }
             Spacer(Modifier.height(10.dp))
-            val count = state.gems.size
-            Text("$count gem${if (count == 1) "" else "s"} found", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            if (state.gemsLoadError == null || state.gems.isNotEmpty()) {
+                val count = state.gems.size
+                Text("$count gem${if (count == 1) "" else "s"} found", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            }
         }
-        if (state.gems.isEmpty()) {
+        if (state.gemsLoadError != null && state.gems.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(18.dp), contentAlignment = Alignment.Center) {
+                GemsLoadFailure(
+                    message = state.gemsLoadError,
+                    isOffline = state.gemsOffline,
+                    onRetry = onRetry,
+                )
+            }
+        } else if (state.gems.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
                     Icon(Icons.Default.Search, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
@@ -298,6 +323,14 @@ fun DiscoverScreen(
                 }
             }
         } else {
+            if (state.gemsLoadError != null) {
+                GemsLoadFailure(
+                    message = state.gemsLoadError,
+                    isOffline = state.gemsOffline,
+                    onRetry = onRetry,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                )
+            }
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(170.dp),
                 modifier = Modifier.fillMaxSize(),
@@ -308,6 +341,48 @@ fun DiscoverScreen(
                 items(state.gems, key = { it.id }) { gem ->
                     GemCard(gem = gem, onClick = { onGem(gem.id) }, onLike = { onLike(gem.id) }, onSave = { onSave(gem.id) })
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GemsLoadFailure(
+    message: String,
+    isOffline: Boolean,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                if (isOffline) Icons.Default.WifiOff else Icons.Default.ErrorOutline,
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                if (isOffline) "You're offline" else "Couldn't load gems",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                if (isOffline) "Check your internet connection and try again." else message,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            FilledTonalButton(onClick = onRetry) {
+                Icon(Icons.Default.Refresh, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Try Again")
             }
         }
     }
