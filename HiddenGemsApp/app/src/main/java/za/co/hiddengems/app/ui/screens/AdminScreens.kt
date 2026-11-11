@@ -342,7 +342,7 @@ private fun AdminAppeals(
             Text("Suspension appeals", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
             Text("Private case messages and account reinstatement.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             val awaiting = state.adminAppeals.count { it.status == "appealed" }
-            Text("$"+"awaiting awaiting a response", color = MaterialTheme.colorScheme.primary)
+            Text("$awaiting awaiting a response", color = MaterialTheme.colorScheme.primary)
         }
         if (state.adminAppeals.isEmpty()) {
             item { Text("No suspension cases yet.") }
