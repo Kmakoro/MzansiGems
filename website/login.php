@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/includes/bootstrap.php';
+require_once __DIR__ . '/includes/login_throttle.php';
 if (is_logged_in()) redirect('profile.php');
 $errors = [];
 $needsVerification = false;
@@ -11,6 +12,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = (string)($_POST['password'] ?? '');
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Enter a valid email address.';
     if ($password === '') $errors[] = 'Enter your password.';
+    if (!$errors && login_throttle_blocked($email)) {
+        $errors[] = 'Too many sign-in attempts. Please try again in 15 minutes.';
+    }
     if (!$errors) {
         $stmt = db()->prepare('SELECT * FROM users WHERE email = ? LIMIT 1'); $stmt->execute([$email]); $user = $stmt->fetch();
         $legacyDemoEmail = legacy_demo_email_for($email);
@@ -18,7 +22,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$legacyDemoEmail]);
             $user = $stmt->fetch();
         }
-        if (!$user || !password_verify($password, $user['password_hash'])) $errors[] = 'The email address or password is incorrect.';
+        if (!$user || !password_verify($password, (string)$user['password_hash'])) {
+            login_throttle_record_failure($email);
+            $errors[] = 'The email address or password is incorrect.';
+        }
         elseif ($user['status'] !== 'active') $errors[] = 'This account is suspended. Contact an administrator.';
         elseif (setting('require_email_verification', '0') === '1' && empty($user['email_verified_at'])) {
             $errors[] = 'Verify your email address before signing in.';
@@ -26,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['verification_email'] = $email;
         }
         else {
+            login_throttle_clear($email);
             if ($legacyDemoEmail !== null && $user['email'] === $legacyDemoEmail) {
                 $upgrade = db()->prepare('UPDATE IGNORE users SET email = ? WHERE id = ?');
                 $upgrade->execute([$email, (int)$user['id']]);
