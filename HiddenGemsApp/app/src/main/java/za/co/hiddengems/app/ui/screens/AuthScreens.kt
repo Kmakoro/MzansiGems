@@ -289,7 +289,7 @@ fun LoginScreen(
                 Box(Modifier.size(8.dp).background(if (serverOnline) Color(0xFF20A66A) else Color.Red, CircleShape))
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    if (serverOnline) "API is Online" else "API is Offline (Check XAMPP)",
+                    if (serverOnline) "Connected to MzansiGems" else "Connection unavailable — check internet",
                     style = MaterialTheme.typography.labelSmall,
                     color = if (serverOnline) Color(0xFF20A66A) else Color.Red
                 )
@@ -443,7 +443,7 @@ fun RegisterScreen(
                 Box(Modifier.size(8.dp).background(if (serverOnline) Color(0xFF20A66A) else Color.Red, CircleShape))
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    if (serverOnline) "API is Online" else "API is Offline (Check XAMPP)",
+                    if (serverOnline) "Connected to MzansiGems" else "Connection unavailable — check internet",
                     style = MaterialTheme.typography.labelSmall,
                     color = if (serverOnline) Color(0xFF20A66A) else Color.Red
                 )

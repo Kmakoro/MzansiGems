@@ -411,8 +411,8 @@ private fun HelpSupportCard() {
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Text(
-                "If the app shows API Offline, check the server/network connection. " +
-                    "For local testing on a real phone, use your computer's LAN IP instead of 10.0.2.2.",
+                "If you cannot load places, check your internet connection and tap Try Again. " +
+                    "If the problem continues while online, the MzansiGems service may be temporarily unavailable.",
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                 style = MaterialTheme.typography.bodySmall,
             )
