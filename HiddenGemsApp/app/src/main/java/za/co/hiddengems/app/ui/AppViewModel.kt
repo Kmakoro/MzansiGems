@@ -67,6 +67,21 @@ sealed interface UiEvent {
     data class Navigate(val route: String) : UiEvent
 }
 
+/** Preserve already-loaded gems when refreshing fails, and clear errors on a successful retry. */
+internal fun AppUiState.withGemsResult(result: ApiResult<List<Gem>>): AppUiState = when (result) {
+    is ApiResult.Success -> copy(
+        gems = result.value,
+        gemsLoadError = null,
+        gemsOffline = false,
+        serverOnline = true,
+    )
+    is ApiResult.Error -> copy(
+        gemsLoadError = result.message,
+        gemsOffline = result.isNetworkError,
+        serverOnline = if (result.isNetworkError) false else serverOnline,
+    )
+}
+
 class AppViewModel(
     application: Application,
     private val repository: HiddenGemsRepository,
@@ -101,15 +116,8 @@ class AppViewModel(
             is ApiResult.Success -> _state.update { it.copy(categories = categories.value) }
             is ApiResult.Error -> if (!categories.isNetworkError) _events.emit(UiEvent.Message(categories.message))
         }
-        when (val gems = repository.gems(null, null, null, null, null, "recommended")) {
-            is ApiResult.Success -> _state.update {
-                it.copy(gems = gems.value, gemsLoadError = null, gemsOffline = false, serverOnline = true)
-            }
-            is ApiResult.Error -> _state.update {
-                it.copy(gemsLoadError = gems.message, gemsOffline = gems.isNetworkError,
-                    serverOnline = if (gems.isNetworkError) false else it.serverOnline)
-            }
-        }
+        val gems = repository.gems(null, null, null, null, null, "recommended")
+        _state.update { it.withGemsResult(gems) }
         val token = session.token()
         if (!token.isNullOrBlank()) {
             when (val me = repository.me()) {
@@ -246,16 +254,8 @@ class AppViewModel(
 
     fun loadGems() = launchBusy {
         val s = _state.value
-        when (val result = repository.gems(s.query.ifBlank { null }, s.city.ifBlank { null }, s.vibe.ifBlank { null }, s.budget.ifBlank { null }, s.activity.ifBlank { null }, s.sort)) {
-            is ApiResult.Success -> _state.update {
-                it.copy(gems = result.value, gemsLoadError = null, gemsOffline = false, serverOnline = true)
-            }
-            is ApiResult.Error -> _state.update {
-                // Keep already-loaded gems visible, but do not mistake a failed request for zero results.
-                it.copy(gemsLoadError = result.message, gemsOffline = result.isNetworkError,
-                    serverOnline = if (result.isNetworkError) false else it.serverOnline)
-            }
-        }
+        val result = repository.gems(s.query.ifBlank { null }, s.city.ifBlank { null }, s.vibe.ifBlank { null }, s.budget.ifBlank { null }, s.activity.ifBlank { null }, s.sort)
+        _state.update { it.withGemsResult(result) }
     }
 
     fun clearFilters() {
