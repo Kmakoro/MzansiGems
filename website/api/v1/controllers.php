@@ -815,12 +815,74 @@ function api_admin_user_update(int $id): never
     $input = api_input();
     $role = (string)($input['role'] ?? '');
     $status = (string)($input['status'] ?? '');
-    if (!in_array($role, ['user','admin'], true) || !in_array($status, ['active','suspended'], true)) api_error('Choose a valid role and status.', 422);
-    if ($id === (int)$admin['id'] && $status === 'suspended') api_error('You cannot suspend your own account.', 422);
-    db()->prepare('UPDATE users SET role=?,status=? WHERE id=?')->execute([$role, $status, $id]);
+    $reason = trim((string)($input['suspension_reason'] ?? ''));
+    try {
+        // Share the website's case creation and token revocation workflow.
+        suspension_update_user($id, $role, $status, $reason, (int)$admin['id']);
+    } catch (DomainException $error) {
+        api_error($error->getMessage(), 422);
+    }
     $stmt = db()->prepare('SELECT id,full_name,email,city,bio,role,status,level,points,email_verified_at,notify_new_gems,notify_comments,notify_likes_saves,personalized_recommendations,show_saved_gems,show_activity_status,created_at,updated_at FROM users WHERE id=?'); $stmt->execute([$id]);
     $user = $stmt->fetch(); if (!$user) api_error('User not found.', 404);
     api_response(api_public_user($user), 'User updated.');
+}
+
+
+/** API access to the same private appeal records as admin/appeals.php. */
+function api_admin_appeals(): never
+{
+    api_require_admin();
+    $cases = db()->query("SELECT c.id,c.user_id,c.reason,c.status,c.updated_at,
+        u.full_name,u.email,u.status AS user_status,
+        (SELECT COUNT(*) FROM suspension_messages m WHERE m.case_id=c.id) AS message_count
+        FROM suspension_cases c JOIN users u ON u.id=c.user_id
+        ORDER BY FIELD(c.status,'appealed','open','under_review','reinstated'), c.updated_at DESC LIMIT 150")->fetchAll();
+    api_response($cases, 'Appeal cases loaded.');
+}
+
+function api_admin_appeal_thread(int $caseId): never
+{
+    api_require_admin();
+    $stmt = db()->prepare("SELECT c.id,c.user_id,c.reason,c.status,c.updated_at,
+        u.full_name,u.email,u.status AS user_status,
+        (SELECT COUNT(*) FROM suspension_messages m WHERE m.case_id=c.id) AS message_count
+        FROM suspension_cases c JOIN users u ON u.id=c.user_id WHERE c.id=? LIMIT 1");
+    $stmt->execute([$caseId]);
+    $case = $stmt->fetch();
+    if (!$case) api_error('Appeal case not found.', 404);
+    api_response(['case' => $case, 'messages' => suspension_messages_for($caseId)]);
+}
+
+function api_admin_appeal_reply(int $caseId): never
+{
+    $admin = api_require_admin();
+    try {
+        suspension_add_message($caseId, (int)$admin['id'], (string)(api_input()['message'] ?? ''), true);
+    } catch (DomainException $error) {
+        api_error($error->getMessage(), 422);
+    }
+    api_response(null, 'Your private reply is visible to the suspended member.');
+}
+
+function api_admin_appeal_reinstate(int $caseId): never
+{
+    $admin = api_require_admin();
+    $stmt = db()->prepare("SELECT c.id,c.user_id,c.status,u.role,u.status AS user_status
+        FROM suspension_cases c JOIN users u ON u.id=c.user_id WHERE c.id=? LIMIT 1");
+    $stmt->execute([$caseId]);
+    $case = $stmt->fetch();
+    if (!$case) api_error('Appeal case not found.', 404);
+    if ($case['user_status'] !== 'suspended' || $case['status'] === 'reinstated') {
+        api_error('This account is no longer suspended.', 422);
+    }
+    $note = trim((string)(api_input()['resolution_message'] ?? ''));
+    try {
+        if ($note !== '') suspension_add_message($caseId, (int)$admin['id'], $note, true);
+        suspension_update_user((int)$case['user_id'], (string)$case['role'], 'active', '', (int)$admin['id']);
+    } catch (DomainException $error) {
+        api_error($error->getMessage(), 422);
+    }
+    api_response(null, 'Account reinstated. The member can sign in again.');
 }
 
 function api_admin_moderation(): never
