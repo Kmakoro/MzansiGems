@@ -29,6 +29,9 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.WifiOff
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
@@ -37,6 +40,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -87,6 +91,7 @@ fun GemDetailScreen(
 ) {
     LaunchedEffect(gemId) { onLoad(gemId) }
     val gem = state.selectedGem?.takeIf { it.id == gemId }
+    val loadError = state.selectedGemLoadError?.takeIf { state.selectedGemRequestId == gemId }
     var showReport by remember { mutableStateOf(false) }
     var reportingReviewId by remember { mutableStateOf<Int?>(null) }
 
@@ -96,20 +101,40 @@ fun GemDetailScreen(
                 title = { Text(gem?.title ?: state.siteName, maxLines = 1) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 actions = {
-                    IconButton(onClick = { showReport = true }) { Icon(Icons.Default.Flag, "Report") }
+                    if (gem != null) {
+                        IconButton(onClick = { showReport = true }) { Icon(Icons.Default.Flag, "Report") }
+                    }
                 },
             )
         },
     ) { padding ->
         if (gem == null) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("Loading gem details…")
+            Box(Modifier.fillMaxSize().padding(padding).padding(16.dp), contentAlignment = Alignment.Center) {
+                if (loadError != null && !state.selectedGemLoading) {
+                    GemDetailFailure(
+                        message = loadError,
+                        isOffline = state.selectedGemOffline,
+                        onRetry = { onLoad(gemId) },
+                    )
+                } else {
+                    Text("Loading gem details…")
+                }
             }
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(bottom = 28.dp),
             ) {
+                if (loadError != null && !state.selectedGemLoading) {
+                    item {
+                        GemDetailFailure(
+                            message = loadError,
+                            isOffline = state.selectedGemOffline,
+                            onRetry = { onLoad(gemId) },
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                }
                 item {
                     Box {
                         AsyncImage(
@@ -245,6 +270,48 @@ fun GemDetailScreen(
                 showReport = false
             },
         )
+    }
+}
+
+@Composable
+private fun GemDetailFailure(
+    message: String,
+    isOffline: Boolean,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                if (isOffline) Icons.Default.WifiOff else Icons.Default.ErrorOutline,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(40.dp),
+            )
+            Text(
+                if (isOffline) "You're offline" else "Couldn't load gem details",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                if (isOffline) "Check your internet connection and try again." else message,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            FilledTonalButton(onClick = onRetry) {
+                Icon(Icons.Default.Refresh, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Try Again")
+            }
+        }
     }
 }
 
