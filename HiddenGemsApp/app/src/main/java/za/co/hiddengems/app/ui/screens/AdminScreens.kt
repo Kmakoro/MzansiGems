@@ -44,6 +44,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -76,12 +77,15 @@ fun AdminScreen(
     onModerateGem: (Int, String, String) -> Unit,
     onModerateReview: (Int, String) -> Unit,
     onResolveReport: (Int, String, String) -> Unit,
-    onUpdateUser: (Int, String, String) -> Unit,
+    onUpdateUser: (Int, String, String, String) -> Unit,
+    onSelectAppeal: (Int) -> Unit,
+    onReplyToAppeal: (Int, String) -> Unit,
+    onReinstateAppeal: (Int, String) -> Unit,
     onSaveSettings: (Map<String, String>) -> Unit,
 ) {
     LaunchedEffect(Unit) { onLoad() }
     var tab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Overview", "Moderation", "Users", "Analytics", "Settings")
+    val tabs = listOf("Overview", "Moderation", "Users", "Appeals", "Analytics", "Settings")
 
     Scaffold(
         topBar = {
@@ -92,14 +96,15 @@ fun AdminScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            TabRow(selectedTabIndex = tab) {
+            ScrollableTabRow(selectedTabIndex = tab, edgePadding = 0.dp) {
                 tabs.forEachIndexed { index, title -> Tab(selected = tab == index, onClick = { tab = index }, text = { Text(title, maxLines = 1) }) }
             }
             when (tab) {
                 0 -> AdminOverview(state)
                 1 -> AdminModeration(state, onModerateGem, onModerateReview, onResolveReport)
                 2 -> AdminUsers(state.adminUsers, onUpdateUser)
-                3 -> AdminAnalyticsView(state)
+                3 -> AdminAppeals(state, onSelectAppeal, onReplyToAppeal, onReinstateAppeal)
+                4 -> AdminAnalyticsView(state)
                 else -> AdminSettingsView(state.adminSettings, onSaveSettings)
             }
         }
@@ -250,7 +255,7 @@ private fun ReportCard(report: ContentReport, onResolve: (Int, String, String) -
 }
 
 @Composable
-private fun AdminUsers(users: List<User>, onUpdate: (Int, String, String) -> Unit) {
+private fun AdminUsers(users: List<User>, onUpdate: (Int, String, String, String) -> Unit) {
     var editing by remember { mutableStateOf<User?>(null) }
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
@@ -277,6 +282,7 @@ private fun AdminUsers(users: List<User>, onUpdate: (Int, String, String) -> Uni
     editing?.let { user ->
         var role by remember(user.id) { mutableStateOf(user.role) }
         var status by remember(user.id) { mutableStateOf(user.status) }
+        var reason by remember(user.id) { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { editing = null },
             title = { Text("Manage ${user.fullName}") },
@@ -288,12 +294,142 @@ private fun AdminUsers(users: List<User>, onUpdate: (Int, String, String) -> Uni
                     }
                     Text("Status")
                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        listOf("active", "suspended").forEach { FilterChip(selected = status == it, onClick = { status = it }, label = { Text(it) }) }
+                        listOf("active", "suspended").forEach {
+                            FilterChip(selected = status == it, onClick = { status = it }, label = { Text(it) })
+                        }
+                    }
+                    if (status == "suspended") {
+                        OutlinedTextField(
+                            value = reason,
+                            onValueChange = { if (it.length <= 500) reason = it },
+                            label = { Text(if (user.status == "suspended") "Update suspension reason (optional)" else "Reason for suspension (required)") },
+                            supportingText = { Text("Explain the action (10–500 characters). The member can see this reason.") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 3,
+                            maxLines = 5,
+                        )
                     }
                 }
             },
-            confirmButton = { Button(onClick = { onUpdate(user.id, role, status); editing = null }) { Text("Save") } },
+            confirmButton = {
+                val reasonValid = status != "suspended" ||
+                    ((user.status == "suspended" && reason.isBlank()) || reason.trim().length in 10..500)
+                Button(
+                    enabled = reasonValid,
+                    onClick = { onUpdate(user.id, role, status, reason.trim()); editing = null },
+                ) { Text("Save") }
+            },
             dismissButton = { TextButton(onClick = { editing = null }) { Text("Cancel") } },
+        )
+    }
+}
+
+@Composable
+private fun AdminAppeals(
+    state: AppUiState,
+    onSelect: (Int) -> Unit,
+    onReply: (Int, String) -> Unit,
+    onReinstate: (Int, String) -> Unit,
+) {
+    val selected = state.selectedAppeal
+    val selectedCase = selected?.appealCase
+    var reply by remember(selectedCase?.id) { mutableStateOf("") }
+    var finalMessage by remember(selectedCase?.id) { mutableStateOf("") }
+    var confirmReinstate by remember { mutableStateOf(false) }
+
+    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item {
+            Text("Suspension appeals", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+            Text("Private case messages and account reinstatement.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val awaiting = state.adminAppeals.count { it.status == "appealed" }
+            Text("$"+"awaiting awaiting a response", color = MaterialTheme.colorScheme.primary)
+        }
+        if (state.adminAppeals.isEmpty()) {
+            item { Text("No suspension cases yet.") }
+        }
+        items(state.adminAppeals, key = { it.id }) { appeal ->
+            OutlinedButton(onClick = { onSelect(appeal.id) }, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.fillMaxWidth()) {
+                    Text(appeal.fullName + " · Case #" + appeal.id, fontWeight = FontWeight.Bold)
+                    Text(appeal.status.replace('_', ' ') + " · " + appeal.messageCount + " messages",
+                        style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
+        if (selectedCase != null && selected != null) {
+            item {
+                Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(selectedCase.fullName + " · Case #" + selectedCase.id,
+                            style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text(selectedCase.email)
+                        Text("Account: " + selectedCase.userStatus + " · Case: " + selectedCase.status.replace('_',' '))
+                        Text("Suspension reason", fontWeight = FontWeight.Bold)
+                        Text(selectedCase.reason)
+                        Text("Conversation", fontWeight = FontWeight.Bold)
+                        if (selected.messages.isEmpty()) {
+                            Text("No appeal messages yet.")
+                        }
+                        selected.messages.forEach { message ->
+                            Card(colors = CardDefaults.cardColors(
+                                containerColor = if (message.role == "admin")
+                                    MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )) {
+                                Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                                    Text(
+                                        (if (message.role == "admin") "Administrator" else "Member") +
+                                            " · " + message.createdAt,
+                                        style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
+                                    )
+                                    Text(message.message)
+                                }
+                            }
+                        }
+                        if (selectedCase.userStatus == "suspended" && selectedCase.status != "reinstated") {
+                            OutlinedTextField(
+                                value = reply,
+                                onValueChange = { if (it.length <= 2000) reply = it },
+                                label = { Text("Private reply to member") },
+                                minLines = 3,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Button(
+                                enabled = reply.trim().length in 10..2000,
+                                onClick = { onReply(selectedCase.id, reply); reply = "" },
+                            ) { Text("Send private reply") }
+                            OutlinedTextField(
+                                value = finalMessage,
+                                onValueChange = { if (it.length <= 2000) finalMessage = it },
+                                label = { Text("Final message (optional)") },
+                                minLines = 2,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Button(onClick = { confirmReinstate = true }) {
+                                Text("Reinstate account")
+                            }
+                        } else {
+                            Text("This case is closed. Messages are retained for moderation records.")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (confirmReinstate && selectedCase != null) {
+        AlertDialog(
+            onDismissRequest = { confirmReinstate = false },
+            title = { Text("Reinstate account?") },
+            text = { Text("Restore access for " + selectedCase.fullName + "? Their posts and saved places will be preserved.") },
+            confirmButton = {
+                Button(onClick = {
+                    onReinstate(selectedCase.id, finalMessage)
+                    confirmReinstate = false
+                    finalMessage = ""
+                }) { Text("Reinstate") }
+            },
+            dismissButton = { TextButton(onClick = { confirmReinstate = false }) { Text("Cancel") } },
         )
     }
 }
