@@ -207,12 +207,31 @@ class AppViewModel(
         }
     }
 
+
     fun logout() = launchBusy {
         repository.logout()
-        _state.value = AppUiState(sessionReady = true, categories = _state.value.categories, gems = _state.value.gems)
-        _events.emit(UiEvent.Message("Signed out successfully."))
+
+        val publicGems = _state.value.gems.map { gem ->
+            gem.copy(
+                isLiked = false,
+                isSaved = false
+            )
+        }
+
+        _state.value = AppUiState(
+            sessionReady = true,
+            categories = _state.value.categories,
+            gems = publicGems
+        )
+
+        loadGems()
+
+        _events.emit(
+            UiEvent.Message("Signed out successfully.")
+        )
         _events.emit(UiEvent.Navigate("home"))
     }
+
 
     fun updateFilters(query: String, city: String, vibe: String, budget: String, activity: String, sort: String) {
         _state.update { it.copy(query = query, city = city, vibe = vibe, budget = budget, activity = activity, sort = sort) }
