@@ -162,6 +162,7 @@ fun MzansiGemApp(viewModel: AppViewModel) {
                             onLogin = { navController.navigate(Routes.LOGIN) },
                             onRegister = { navController.navigate(Routes.REGISTER) },
                             onShare = { navController.navigate(Routes.SHARE) },
+                            onRetry = viewModel::loadGems,
                         )
                     }
                     composable(Routes.DISCOVER) {
@@ -173,6 +174,7 @@ fun MzansiGemApp(viewModel: AppViewModel) {
                             onGem = { navController.navigate(Routes.gem(it)) },
                             onLike = viewModel::toggleLike,
                             onSave = viewModel::toggleSave,
+                            onRetry = viewModel::loadGems,
                         )
                     }
                     composable(Routes.SHARE) {
