@@ -36,6 +36,8 @@ data class AppUiState(
     val currentUser: User? = null,
     val categories: Categories = Categories(),
     val gems: List<Gem> = emptyList(),
+    val gemsLoadError: String? = null,
+    val gemsOffline: Boolean = false,
     val selectedGem: Gem? = null,
     val savedGems: List<Gem> = emptyList(),
     val profile: User? = null,
@@ -63,6 +65,21 @@ data class AppUiState(
 sealed interface UiEvent {
     data class Message(val text: String) : UiEvent
     data class Navigate(val route: String) : UiEvent
+}
+
+/** Preserve already-loaded gems when refreshing fails, and clear errors on a successful retry. */
+internal fun AppUiState.withGemsResult(result: ApiResult<List<Gem>>): AppUiState = when (result) {
+    is ApiResult.Success -> copy(
+        gems = result.value,
+        gemsLoadError = null,
+        gemsOffline = false,
+        serverOnline = true,
+    )
+    is ApiResult.Error -> copy(
+        gemsLoadError = result.message,
+        gemsOffline = result.isNetworkError,
+        serverOnline = if (result.isNetworkError) false else serverOnline,
+    )
 }
 
 class AppViewModel(
@@ -97,12 +114,10 @@ class AppViewModel(
         _state.update { it.copy(busy = true) }
         when (val categories = repository.categories()) {
             is ApiResult.Success -> _state.update { it.copy(categories = categories.value) }
-            is ApiResult.Error -> _events.emit(UiEvent.Message(categories.message))
+            is ApiResult.Error -> if (!categories.isNetworkError) _events.emit(UiEvent.Message(categories.message))
         }
-        when (val gems = repository.gems(null, null, null, null, null, "recommended")) {
-            is ApiResult.Success -> _state.update { it.copy(gems = gems.value) }
-            is ApiResult.Error -> _events.emit(UiEvent.Message(gems.message))
-        }
+        val gems = repository.gems(null, null, null, null, null, "recommended")
+        _state.update { it.withGemsResult(gems) }
         val token = session.token()
         if (!token.isNullOrBlank()) {
             when (val me = repository.me()) {
@@ -239,10 +254,8 @@ class AppViewModel(
 
     fun loadGems() = launchBusy {
         val s = _state.value
-        when (val result = repository.gems(s.query.ifBlank { null }, s.city.ifBlank { null }, s.vibe.ifBlank { null }, s.budget.ifBlank { null }, s.activity.ifBlank { null }, s.sort)) {
-            is ApiResult.Success -> _state.update { it.copy(gems = result.value) }
-            is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
-        }
+        val result = repository.gems(s.query.ifBlank { null }, s.city.ifBlank { null }, s.vibe.ifBlank { null }, s.budget.ifBlank { null }, s.activity.ifBlank { null }, s.sort)
+        _state.update { it.withGemsResult(result) }
     }
 
     fun clearFilters() {
