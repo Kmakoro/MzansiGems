@@ -39,6 +39,10 @@ data class AppUiState(
     val gemsLoadError: String? = null,
     val gemsOffline: Boolean = false,
     val selectedGem: Gem? = null,
+    val selectedGemRequestId: Int? = null,
+    val selectedGemLoading: Boolean = false,
+    val selectedGemLoadError: String? = null,
+    val selectedGemOffline: Boolean = false,
     val savedGems: List<Gem> = emptyList(),
     val profile: User? = null,
     val profileGems: List<Gem> = emptyList(),
@@ -80,6 +84,35 @@ internal fun AppUiState.withGemsResult(result: ApiResult<List<Gem>>): AppUiState
         gemsOffline = result.isNetworkError,
         serverOnline = if (result.isNetworkError) false else serverOnline,
     )
+}
+
+/** Start a detail request and discard a previously selected different gem. */
+internal fun AppUiState.beginGemLoad(id: Int): AppUiState = copy(
+    selectedGem = selectedGem?.takeIf { it.id == id },
+    selectedGemRequestId = id,
+    selectedGemLoading = true,
+    selectedGemLoadError = null,
+    selectedGemOffline = false,
+)
+
+/** Ignore responses for gems that are no longer being viewed. */
+internal fun AppUiState.withGemResult(id: Int, result: ApiResult<Gem>): AppUiState {
+    if (selectedGemRequestId != id) return this
+    return when (result) {
+        is ApiResult.Success -> copy(
+            selectedGem = result.value,
+            selectedGemLoading = false,
+            selectedGemLoadError = null,
+            selectedGemOffline = false,
+            serverOnline = true,
+        )
+        is ApiResult.Error -> copy(
+            selectedGemLoading = false,
+            selectedGemLoadError = result.message,
+            selectedGemOffline = result.isNetworkError,
+            serverOnline = if (result.isNetworkError) false else serverOnline,
+        )
+    }
 }
 
 class AppViewModel(
@@ -271,10 +304,9 @@ class AppViewModel(
     }
 
     fun loadGem(id: Int) = launchBusy {
-        when (val result = repository.gem(id)) {
-            is ApiResult.Success -> _state.update { it.copy(selectedGem = result.value) }
-            is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
-        }
+        _state.update { it.beginGemLoad(id) }
+        val result = repository.gem(id)
+        _state.update { it.withGemResult(id, result) }
     }
 
     fun toggleLike(id: Int) {
