@@ -201,7 +201,11 @@ data class GemDraft(
 
 sealed interface ApiResult<out T> {
     data class Success<T>(val value: T, val message: String = "") : ApiResult<T>
-    data class Error(val message: String, val fieldErrors: Map<String, String> = emptyMap()) : ApiResult<Nothing>
+    data class Error(
+        val message: String,
+        val fieldErrors: Map<String, String> = emptyMap(),
+        val isNetworkError: Boolean = false,
+    ) : ApiResult<Nothing>
 }
 
 data class AdminMetrics(
