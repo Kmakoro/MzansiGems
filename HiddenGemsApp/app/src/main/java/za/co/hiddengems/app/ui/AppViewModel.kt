@@ -36,6 +36,8 @@ data class AppUiState(
     val currentUser: User? = null,
     val categories: Categories = Categories(),
     val gems: List<Gem> = emptyList(),
+    val gemsLoadError: String? = null,
+    val gemsOffline: Boolean = false,
     val selectedGem: Gem? = null,
     val savedGems: List<Gem> = emptyList(),
     val profile: User? = null,
@@ -97,11 +99,16 @@ class AppViewModel(
         _state.update { it.copy(busy = true) }
         when (val categories = repository.categories()) {
             is ApiResult.Success -> _state.update { it.copy(categories = categories.value) }
-            is ApiResult.Error -> _events.emit(UiEvent.Message(categories.message))
+            is ApiResult.Error -> if (!categories.isNetworkError) _events.emit(UiEvent.Message(categories.message))
         }
         when (val gems = repository.gems(null, null, null, null, null, "recommended")) {
-            is ApiResult.Success -> _state.update { it.copy(gems = gems.value) }
-            is ApiResult.Error -> _events.emit(UiEvent.Message(gems.message))
+            is ApiResult.Success -> _state.update {
+                it.copy(gems = gems.value, gemsLoadError = null, gemsOffline = false, serverOnline = true)
+            }
+            is ApiResult.Error -> _state.update {
+                it.copy(gemsLoadError = gems.message, gemsOffline = gems.isNetworkError,
+                    serverOnline = if (gems.isNetworkError) false else it.serverOnline)
+            }
         }
         val token = session.token()
         if (!token.isNullOrBlank()) {
@@ -240,8 +247,14 @@ class AppViewModel(
     fun loadGems() = launchBusy {
         val s = _state.value
         when (val result = repository.gems(s.query.ifBlank { null }, s.city.ifBlank { null }, s.vibe.ifBlank { null }, s.budget.ifBlank { null }, s.activity.ifBlank { null }, s.sort)) {
-            is ApiResult.Success -> _state.update { it.copy(gems = result.value) }
-            is ApiResult.Error -> _events.emit(UiEvent.Message(result.message))
+            is ApiResult.Success -> _state.update {
+                it.copy(gems = result.value, gemsLoadError = null, gemsOffline = false, serverOnline = true)
+            }
+            is ApiResult.Error -> _state.update {
+                // Keep already-loaded gems visible, but do not mistake a failed request for zero results.
+                it.copy(gemsLoadError = result.message, gemsOffline = result.isNetworkError,
+                    serverOnline = if (result.isNetworkError) false else it.serverOnline)
+            }
         }
     }
 
