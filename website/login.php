@@ -5,6 +5,7 @@ require_once __DIR__ . '/includes/login_throttle.php';
 if (is_logged_in()) redirect('profile.php');
 $errors = [];
 $needsVerification = false;
+$needsPasswordReset = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     remember_old_input($_POST);
@@ -32,6 +33,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $needsVerification = true;
             $_SESSION['verification_email'] = $email;
         }
+        elseif (password_reset_needed($user, $password)) {
+            mark_password_reset_required((int)$user['id']);
+            login_throttle_clear($email);
+            $errors[] = 'Your password does not meet the new security requirements. Reset it before signing in.';
+            $needsPasswordReset = true;
+        }
         else {
             login_throttle_clear($email);
             if ($legacyDemoEmail !== null && $user['email'] === $legacyDemoEmail) {
@@ -51,6 +58,7 @@ $pageTitle = 'Welcome back'; $bodyClass = 'auth-body'; require __DIR__ . '/inclu
     <div class="auth-icon">♙</div><h1>Welcome Back!</h1><p class="muted">Sign in to discover places with Mzansi Gem</p>
     <?php if ($errors): ?><div class="toast toast-danger" style="position:static;margin-bottom:14px"><span><?= e(implode(' ', $errors)) ?></span></div><?php endif; ?>
     <?php if ($needsVerification): ?><a class="btn btn-ghost btn-block" style="margin-bottom:14px" href="<?= url('resend-verification.php') ?>">Send a new verification link</a><?php endif; ?>
+    <?php if ($needsPasswordReset): ?><a class="btn btn-primary btn-block" style="margin-bottom:14px" href="<?= url('forgot-password.php') ?>">Reset my password</a><?php endif; ?>
     <form method="post"><?= csrf_field() ?>
         <div class="form-group"><label for="email">Email Address</label><input class="form-control" id="email" name="email" type="email" value="<?= old('email') ?>" placeholder="you@example.com" required></div>
         <div class="form-group"><label for="password">Password</label><input class="form-control" id="password" name="password" type="password" placeholder="Enter your password" required></div>
