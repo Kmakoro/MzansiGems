@@ -134,7 +134,7 @@ function api_token_record(): ?array
         LIMIT 1");
     $stmt->execute([$hash]);
     $record = $stmt->fetch() ?: null;
-    if ($record && $record['status'] === 'active') {
+    if ($record && $record['status'] === 'active' && empty($record['password_reset_required'])) {
         db()->prepare('UPDATE api_tokens SET last_used_at = NOW() WHERE id = ?')->execute([(int)$record['token_id']]);
         return $record;
     }
