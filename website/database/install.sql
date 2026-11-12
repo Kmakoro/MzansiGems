@@ -25,6 +25,7 @@ CREATE TABLE users (
     firebase_uid VARCHAR(128) NULL UNIQUE,
     city VARCHAR(100) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    password_reset_required TINYINT(1) NOT NULL DEFAULT 0,
     email_verified_at DATETIME NULL,
     bio VARCHAR(300) NULL,
     role ENUM('user','admin') NOT NULL DEFAULT 'user',
