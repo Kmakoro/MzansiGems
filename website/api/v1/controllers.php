@@ -70,7 +70,7 @@ function api_auth_login(): never
     if (login_throttle_blocked($email)) {
         api_error('Too many sign-in attempts. Please try again in 15 minutes.', 429);
     }
-    $stmt = db()->prepare('SELECT id,full_name,email,city,bio,role,status,level,points,password_hash,email_verified_at,notify_new_gems,notify_comments,notify_likes_saves,personalized_recommendations,show_saved_gems,show_activity_status,created_at,updated_at FROM users WHERE email = ? LIMIT 1');
+    $stmt = db()->prepare('SELECT id,full_name,email,city,bio,role,status,level,points,password_hash,password_reset_required,email_verified_at,notify_new_gems,notify_comments,notify_likes_saves,personalized_recommendations,show_saved_gems,show_activity_status,created_at,updated_at FROM users WHERE email = ? LIMIT 1');
     $stmt->execute([$email]);
     $user = $stmt->fetch();
     if (!$user || !password_verify($password, (string)$user['password_hash'])) {
@@ -82,6 +82,11 @@ function api_auth_login(): never
     }
     if (setting('require_email_verification', '0') === '1' && empty($user['email_verified_at'])) {
         api_error('Please verify your email address before signing in.', 403);
+    }
+    if (password_reset_needed($user, $password)) {
+        mark_password_reset_required((int)$user['id']);
+        login_throttle_clear($email);
+        api_error('Your password no longer meets the security requirements. Use Forgot password to reset it before signing in.', 403);
     }
     // Clear the account/IP failures after a legitimate sign-in. Keep the
     // IP-wide counter to limit password spraying across many addresses.
@@ -175,6 +180,9 @@ function api_auth_firebase(): never
 
     if (!$user || $user['status'] !== 'active') {
         api_error('This account is suspended or unavailable.', 403);
+    }
+    if (!empty($user['password_reset_required'])) {
+        api_error('Your account needs a password reset. Use Forgot password before signing in again.', 403);
     }
 
     // Repair only the placeholder from earlier Google registrations. Never
@@ -297,7 +305,7 @@ function api_auth_reset_password(): never
     $userId = (int)$record['user_id'];
     db()->beginTransaction();
     try {
-        db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?')->execute([password_hash($password, PASSWORD_DEFAULT), $userId]);
+        db()->prepare('UPDATE users SET password_hash = ?, password_reset_required = 0 WHERE id = ?')->execute([password_hash($password, PASSWORD_DEFAULT), $userId]);
         db()->prepare('UPDATE password_resets SET used_at = NOW() WHERE id = ?')->execute([(int)$record['id']]);
         db()->prepare('DELETE FROM api_tokens WHERE user_id = ?')->execute([$userId]);
         db()->commit();
@@ -736,7 +744,7 @@ function api_profile_password(): never
     if (!password_verify($current, (string)$user['password_hash'])) api_error('Current password is incorrect.', 422);
     if ($policyError = password_policy_error($password)) api_error($policyError, 422);
     if ($password !== $confirm) api_error('New passwords do not match.', 422);
-    db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?')->execute([password_hash($password, PASSWORD_DEFAULT), (int)$user['id']]);
+    db()->prepare('UPDATE users SET password_hash = ?, password_reset_required = 0 WHERE id = ?')->execute([password_hash($password, PASSWORD_DEFAULT), (int)$user['id']]);
     db()->prepare('DELETE FROM api_tokens WHERE user_id = ? AND id <> ?')->execute([(int)$user['id'], (int)(api_token_record()['token_id'] ?? 0)]);
     api_response(null, 'Password changed successfully.');
 }
