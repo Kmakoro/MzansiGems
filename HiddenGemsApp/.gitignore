@@ -8,3 +8,10 @@ app/build/
 captures/
 .externalNativeBuild/
 .cxx/
+# Private Android signing material and generated release artifacts
+*.jks
+*.keystore
+*.aab
+*.apk
+*.apks
+app/release/
