@@ -238,6 +238,13 @@ jobs:
           DB_PASS: root
         run: php website/scripts/check_database.php
 
+      - name: Verify legacy password reset schema
+        env:
+          MYSQL_PWD: root
+        run: |
+          docker exec -e MYSQL_PWD=root "${{ job.services.mysql.id }}" mysql -uroot -Nse \
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='hidden_gems' AND TABLE_NAME='users' AND COLUMN_NAME='password_reset_required';" | grep -qx password_reset_required
+
       - name: Verify required database records
         env:
           MYSQL_PWD: root
