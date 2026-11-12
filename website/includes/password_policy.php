@@ -48,3 +48,38 @@ function password_policy_error(string $password): ?string
 
     return null;
 }
+
+/**
+ * Apply only after the account password has been verified. Password hashes
+ * cannot be inspected to infer whether the original password was weak.
+ */
+function password_reset_needed(array $user, ?string $verifiedPassword = null): bool
+{
+    return !empty($user['password_reset_required'])
+        || ($verifiedPassword !== null && password_policy_error($verifiedPassword) !== null);
+}
+
+/**
+ * Lock the verified legacy account until an email-based password reset.
+ * Revoke long-lived login credentials immediately, without deleting users,
+ * content, reviews or password-reset links.
+ */
+function mark_password_reset_required(int $userId): void
+{
+    $connection = db();
+    $connection->beginTransaction();
+    try {
+        $connection->prepare('UPDATE users SET password_reset_required = 1 WHERE id = ?')
+            ->execute([$userId]);
+        $connection->prepare('DELETE FROM api_tokens WHERE user_id = ?')
+            ->execute([$userId]);
+        $connection->prepare('DELETE FROM remember_tokens WHERE user_id = ?')
+            ->execute([$userId]);
+        $connection->commit();
+    } catch (Throwable $error) {
+        if ($connection->inTransaction()) {
+            $connection->rollBack();
+        }
+        throw $error;
+    }
+}
