@@ -88,8 +88,11 @@ function current_user(): ?array
     $stmt = db()->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
     $stmt->execute([$id]);
     $user = $stmt->fetch();
-    if (!$user || $user['status'] !== 'active') {
+    if (!$user || $user['status'] !== 'active' || !empty($user['password_reset_required'])) {
         unset($_SESSION['user_id']);
+        if ($user && !empty($user['password_reset_required'])) {
+            flash('warning', 'Please reset your password before accessing your account.');
+        }
         return null;
     }
 
@@ -160,7 +163,8 @@ function attempt_remember_login(): void
     $stmt = db()->prepare('SELECT rt.*, u.* FROM remember_tokens rt JOIN users u ON u.id = rt.user_id WHERE rt.selector = ? AND rt.expires_at > NOW() LIMIT 1');
     $stmt->execute([$selector]);
     $row = $stmt->fetch();
-    if ($row && hash_equals((string)$row['token_hash'], hash('sha256', $validator)) && $row['status'] === 'active') {
+    if ($row && hash_equals((string)$row['token_hash'], hash('sha256', $validator))
+        && $row['status'] === 'active' && empty($row['password_reset_required'])) {
         $_SESSION['user_id'] = (int)$row['user_id'];
         session_regenerate_id(true);
     }
