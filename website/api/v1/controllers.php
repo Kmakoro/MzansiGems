@@ -64,10 +64,17 @@ function api_auth_login(): never
     if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $password === '') {
         api_error('Email and password are required.', 422);
     }
+    // Share the website's IP and IP/email failure counters. Only password
+    // logins are throttled; Google/Firebase sign-in is not changed.
+    require_once dirname(__DIR__, 2) . '/includes/login_throttle.php';
+    if (login_throttle_blocked($email)) {
+        api_error('Too many sign-in attempts. Please try again in 15 minutes.', 429);
+    }
     $stmt = db()->prepare('SELECT id,full_name,email,city,bio,role,status,level,points,password_hash,email_verified_at,notify_new_gems,notify_comments,notify_likes_saves,personalized_recommendations,show_saved_gems,show_activity_status,created_at,updated_at FROM users WHERE email = ? LIMIT 1');
     $stmt->execute([$email]);
     $user = $stmt->fetch();
     if (!$user || !password_verify($password, (string)$user['password_hash'])) {
+        login_throttle_record_failure($email);
         api_error('The email address or password is incorrect.', 401);
     }
     if ($user['status'] !== 'active') {
@@ -76,6 +83,9 @@ function api_auth_login(): never
     if (setting('require_email_verification', '0') === '1' && empty($user['email_verified_at'])) {
         api_error('Please verify your email address before signing in.', 403);
     }
+    // Clear the account/IP failures after a legitimate sign-in. Keep the
+    // IP-wide counter to limit password spraying across many addresses.
+    login_throttle_clear($email);
     $token = api_issue_token((int)$user['id'], (string)($input['device_name'] ?? 'Android app'));
     api_response(['token' => $token, 'token_type' => 'Bearer', 'user' => api_public_user($user)], 'Welcome back!');
 }
