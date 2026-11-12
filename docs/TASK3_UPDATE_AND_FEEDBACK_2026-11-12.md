@@ -34,7 +34,7 @@ The changes from 10–12 November 2026 responded to identified risks in sign-in 
 | Insecure password such as `1234` / weak numeric password | 15+ characters; upper/lowercase, number, symbol; known/sequential/repeated patterns rejected on creation/change/reset | Implemented and manually checked; PHP/Android tests |
 | Direct REST API bypass of front-end password rules | Server-side PHP policy used for matching endpoints | Source/CI; attach direct malformed request/response screenshots |
 | Older user passwords still weak | Login remains compatible until a password is changed/reset | Policy for legacy-account remediation still to decide |
-| Repeated password guessing | Website login throttling per IP/email and per IP, tested with PHP | Website implementation; verify live operation and Android API parity |
+| Repeated password guessing | Website login throttle already works; API password login now shares its IP/email and IP counters on a review branch | Automated API HTTP 401/429 and independent-user login test added; PR merge, production deployment and live acceptance evidence still required |
 | Concurrent login timeouts | Normal login/session tested; no quantitative concurrent load-test recovered | **Not yet evidenced** |
 | App crashes, network errors | Recoverable offline state and Try Again on Discover and gem details, no false empty result | Manual emulator screenshots and new unit tests |
 | Research gap / evidence of client need | Problem and comparison approach documented | **Need original survey/interviews and client meeting evidence** |
@@ -65,7 +65,7 @@ Major features: registration, email/password and Google sign-in, password reset/
 
 - Real-device physical Android test and recorded demonstration.
 - Measured **concurrent logins, timeouts, latency and error rates** on an authorised staging environment (do not stress-test HelioHost shared hosting without permission).
-- Direct API password-strength rejection and API throttling parity.
+- Direct API password-strength rejection and production API throttling parity (branch includes a local integration regression test; production is not yet verified).
 - Android-specific password-reset deep link demonstration.
 - Full suspension → appeal → reply → reinstatement acceptance test.
 - Client/user consultations, research findings, willingness-to-pay evidence and signed client UAT.
