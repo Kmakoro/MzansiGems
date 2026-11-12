@@ -215,6 +215,9 @@ jobs:
       - name: Test password strength policy
         run: php website/tests/password_policy_test.php
 
+      - name: Test legacy weak-password reset decisions
+        run: php website/tests/legacy_password_reset_test.php
+
       - name: Test website login rate limiting
         run: php website/tests/login_throttle_test.php
 
