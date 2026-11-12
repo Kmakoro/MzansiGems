@@ -75,6 +75,10 @@ if ($user['status'] !== 'active') {
     flash('danger', 'This account is suspended.');
     redirect('login.php');
 }
+if (!empty($user['password_reset_required'])) {
+    flash('warning', 'Please reset your password using Forgot password before signing in again.');
+    redirect('forgot-password.php');
+}
 // Website and Android share the same users table. Repair the legacy Google
 // placeholder when the actual name comes from Google's verified userinfo.
 // Preserve any name the member customized in Profile Settings.
