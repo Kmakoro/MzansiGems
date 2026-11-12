@@ -39,17 +39,53 @@ function api_request(string $method, string $url, ?array $json = null, ?string $
     return $decoded;
 }
 
+// This integration test changes seeded database records and generates failed
+// logins. It must never run against production or a public staging host.
+$testHost = (string)parse_url($baseUrl, PHP_URL_HOST);
+if (!in_array($testHost, ['localhost', '127.0.0.1'], true)) {
+    fail_test('Integration tests may only target a local test API.');
+}
+
+function expect_api_login_error(string $url, string $email, string $password, int $expectedStatus): void {
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => ['Accept: application/json', 'Content-Type: application/json'],
+        CURLOPT_POSTFIELDS => json_encode(['email' => $email, 'password' => $password], JSON_THROW_ON_ERROR),
+        CURLOPT_TIMEOUT => 20,
+    ]);
+    $raw = curl_exec($ch);
+    $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    $response = is_string($raw) ? json_decode($raw, true) : null;
+    if ($status !== $expectedStatus || !is_array($response) || ($response['success'] ?? null) !== false) {
+        fail_test('Expected API login HTTP ' . $expectedStatus . ', got HTTP ' . $status . '.');
+    }
+}
+
 $health = api_request('GET', $baseUrl . '/health');
 if (($health['data']['status'] ?? '') !== 'healthy') fail_test('Health endpoint is not healthy.');
 echo "PASS: API health\n";
 
+// Five wrong passwords for one IP/email must still return 401;
+// the next request must be blocked with HTTP 429.
+$guessEmail = 'ci-unknown-' . bin2hex(random_bytes(6)) . '@example.test';
+for ($attempt = 0; $attempt < 5; $attempt++) {
+    expect_api_login_error($baseUrl . '/auth/login', $guessEmail, 'wrong-password', 401);
+}
+expect_api_login_error($baseUrl . '/auth/login', $guessEmail, 'wrong-password', 429);
+echo "PASS: API rejects repeated password guesses with HTTP 429\n";
+
+// The 5 failed attempts must not prevent a different, legitimate account on
+// the same test IP from signing in.
 $login = api_request('POST', $baseUrl . '/auth/login', [
     'email' => 'user@mzansigem.local',
     'password' => 'User@123',
 ]);
 $token = (string)($login['data']['token'] ?? '');
 if ($token === '') fail_test('Login did not return a bearer token.');
-echo "PASS: email/password login\n";
+echo "PASS: independent legitimate API login after unrelated bad guesses\n";
 
 $me = api_request('GET', $baseUrl . '/auth/me', null, $token);
 if (($me['data']['email'] ?? '') !== 'user@mzansigem.local') fail_test('Authenticated user mismatch.');

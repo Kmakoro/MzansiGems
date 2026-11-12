@@ -24,6 +24,7 @@ The changes from 10–12 November 2026 responded to identified risks in sign-in 
 | [#23](https://github.com/Kmakoro/MzansiGems/pull/23) | Offline / Try Again on individual gem detail pages | Merged; emulator retry success |
 | [#24](https://github.com/Kmakoro/MzansiGems/pull/24) | Remove XAMPP language from hosted API connection status; release checklist | Merged; connected status shown |
 | [#25](https://github.com/Kmakoro/MzansiGems/pull/25) | Fix fatal website login error from missing `login_throttle_blocked()` function | Merged, correct files deployed, website login after password reset manually passed |
+| [#27](https://github.com/Kmakoro/MzansiGems/pull/27) | Reuse website login throttle in API password login, with safe 429 responses and independent-account checks | PHP and Android CI passed; live API controller deployment and smoke test pending |
 
 **Production deployment differs from GitHub merging:** PHP changes need targeted uploads to HelioHost `httpdocs/`. PR #25 was deployed by adding `includes/login_throttle.php` and aligning `login.php` after backups; subsequent user screenshots confirmed the live site reached `profile.php`.
 
@@ -34,7 +35,7 @@ The changes from 10–12 November 2026 responded to identified risks in sign-in 
 | Insecure password such as `1234` / weak numeric password | 15+ characters; upper/lowercase, number, symbol; known/sequential/repeated patterns rejected on creation/change/reset | Implemented and manually checked; PHP/Android tests |
 | Direct REST API bypass of front-end password rules | Server-side PHP policy used for matching endpoints | Source/CI; attach direct malformed request/response screenshots |
 | Older user passwords still weak | Login remains compatible until a password is changed/reset | Policy for legacy-account remediation still to decide |
-| Repeated password guessing | Website login throttling per IP/email and per IP, tested with PHP | Website implementation; verify live operation and Android API parity |
+| Repeated password guessing | Website and API password-login code share IP/email and IP counters (PR #27) | Local API HTTP 401/429 and independent-user sign-in tests passed in CI; live HelioHost deployment and acceptance test still required |
 | Concurrent login timeouts | Normal login/session tested; no quantitative concurrent load-test recovered | **Not yet evidenced** |
 | App crashes, network errors | Recoverable offline state and Try Again on Discover and gem details, no false empty result | Manual emulator screenshots and new unit tests |
 | Research gap / evidence of client need | Problem and comparison approach documented | **Need original survey/interviews and client meeting evidence** |
@@ -65,7 +66,7 @@ Major features: registration, email/password and Google sign-in, password reset/
 
 - Real-device physical Android test and recorded demonstration.
 - Measured **concurrent logins, timeouts, latency and error rates** on an authorised staging environment (do not stress-test HelioHost shared hosting without permission).
-- Direct API password-strength rejection and API throttling parity.
+- Direct API weak-password rejection evidence and production API throttling verification (local API throttling integration test now passes; live behaviour is still unverified).
 - Android-specific password-reset deep link demonstration.
 - Full suspension → appeal → reply → reinstatement acceptance test.
 - Client/user consultations, research findings, willingness-to-pay evidence and signed client UAT.
